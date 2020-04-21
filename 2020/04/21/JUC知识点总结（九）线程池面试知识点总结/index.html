@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="多线程,线程池," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="15. 线程池15.1 为什么要使用线程池？ 降低资源消耗：通过重复利用已创建的线程降低线程创建和销毁造成的消耗  提高响应速度：任务到达时，任务可以不需要等到线程创建就能立即执行  提高线程的可管理性   15.2 线程池的体系结构：   java.util.concurrent.Executor : 负责线程的使用与调度的根接口  ExecutorService 子接口: 线程池的主要接口 T">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JUC知识点总结（九）JAVA线程池">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B9%9D%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%9D%A2%E8%AF%95%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="15. 线程池15.1 为什么要使用线程池？ 降低资源消耗：通过重复利用已创建的线程降低线程创建和销毁造成的消耗  提高响应速度：任务到达时，任务可以不需要等到线程创建就能立即执行  提高线程的可管理性   15.2 线程池的体系结构：   java.util.concurrent.Executor : 负责线程的使用与调度的根接口  ExecutorService 子接口: 线程池的主要接口 T">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-21T08:56:05.000Z">
+<meta property="article:modified_time" content="2020-04-21T06:29:15.463Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="多线程">
+<meta property="article:tag" content="线程池">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/JUC知识点总结（九）线程池面试知识点总结/"/>
+
+
+
+
+
+  <title>JUC知识点总结（九）JAVA线程池 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B9%9D%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%9D%A2%E8%AF%95%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">JUC知识点总结（九）JAVA线程池</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/JUC/" itemprop="url" rel="index">
+                    <span itemprop="name">JUC</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="15-线程池"><a href="#15-线程池" class="headerlink" title="15. 线程池"></a>15. 线程池</h3><h4 id="15-1-为什么要使用线程池？"><a href="#15-1-为什么要使用线程池？" class="headerlink" title="15.1 为什么要使用线程池？"></a>15.1 为什么要使用线程池？</h4><ul>
+<li><p><strong>降低资源消耗</strong>：通过重复利用已创建的线程降低线程创建和销毁造成的消耗</p>
+</li>
+<li><p><strong>提高响应速度</strong>：任务到达时，任务可以不需要等到线程创建就能立即执行</p>
+</li>
+<li><p><strong>提高线程的可管理性</strong></p>
+</li>
+</ul>
+<h4 id="15-2-线程池的体系结构："><a href="#15-2-线程池的体系结构：" class="headerlink" title="15.2 线程池的体系结构："></a>15.2 线程池的体系结构：</h4><p>   java.util.concurrent.Executor : 负责线程的使用与调度的根接口</p>
+<ul>
+<li>ExecutorService 子接口: 线程池的主要接口</li>
+<li>ThreadPoolExecutor 线程池的实现类<ul>
+<li>ScheduledExecutorService 子接口：负责线程的调度<ul>
+<li>ScheduledThreadPoolExecutor ：继承 ThreadPoolExecutor，实现 ScheduledExecutorService</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h4 id="15-3-创建线程池的方法"><a href="#15-3-创建线程池的方法" class="headerlink" title="15.3 创建线程池的方法"></a>15.3 创建线程池的方法</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> ExecutorService executor = <span class="keyword">new</span> ThreadPoolExecutor(<span class="number">10</span>, <span class="number">10</span>,</span><br><span class="line">        <span class="number">60L</span>, TimeUnit.SECONDS, <span class="keyword">new</span> ArrayBlockingQueue(<span class="number">10</span>));</span><br><span class="line"><span class="comment">/***********************************************************************/</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize, //核心池大小大小</span></span></span><br><span class="line"><span class="function"><span class="params">                              <span class="keyword">int</span> maximumPoolSize, //最大容量</span></span></span><br><span class="line"><span class="function"><span class="params">                            <span class="keyword">long</span> keepAliveTime, //线程数大于corePoolSize后，空闲存活时间</span></span></span><br><span class="line"><span class="function"><span class="params">                              TimeUnit unit, //存活时间</span></span></span><br><span class="line"><span class="function"><span class="params">                            BlockingQueue&lt;Runnable&gt; workQueue, //线程池的等待队列</span></span></span><br><span class="line"><span class="function"><span class="params">                              ThreadFactory threadFactory, //线程工场</span></span></span><br><span class="line"><span class="function"><span class="params">                              RejectedExecutionHandler handler)</span> </span>&#123;<span class="comment">//拒绝策略</span></span><br><span class="line">    <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span> ||</span><br><span class="line">            maximumPoolSize &lt;= <span class="number">0</span> ||</span><br><span class="line">            maximumPoolSize &lt; corePoolSize ||</span><br><span class="line">            keepAliveTime &lt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">    <span class="keyword">if</span> (workQueue == <span class="keyword">null</span> || threadFactory == <span class="keyword">null</span> || handler == <span class="keyword">null</span>)</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">    <span class="keyword">this</span>.acc = System.getSecurityManager() == <span class="keyword">null</span> ?</span><br><span class="line">            <span class="keyword">null</span> :</span><br><span class="line">            AccessController.getContext();</span><br><span class="line">    <span class="keyword">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">    <span class="keyword">this</span>.maximumPoolSize = maximumPoolSize;</span><br><span class="line">    <span class="keyword">this</span>.workQueue = workQueue;</span><br><span class="line">    <span class="keyword">this</span>.keepAliveTime = unit.toNanos(keepAliveTime);</span><br><span class="line">    <span class="keyword">this</span>.threadFactory = threadFactory;</span><br><span class="line">    <span class="keyword">this</span>.handler = handler;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="15-3-1-线程池的拒绝策略"><a href="#15-3-1-线程池的拒绝策略" class="headerlink" title="15.3.1 线程池的拒绝策略"></a>15.3.1 线程池的拒绝策略</h5><p>  等待队列也已经满了，再也塞不下新任务了。同时线程池中的max线程数也达到了，无法继续为新任务服务。这时候我们就需要拒绝策略机制合理的解决这个问题。</p>
+<ul>
+<li>AbortPolicy 默认       抛出RejectedExecutionException异常阻止系统正常运行</li>
+</ul>
+<ul>
+<li><p>CallerRunsPolicy     该策略既不会抛出任务，也不会抛出异常，而是将某些任务交由调用者完成。</p>
+</li>
+<li><p>DiscardOldestPolicy   抛弃队列中等待最久的任务，然后把当前任务加入到队列中尝试再次提交当前任务。</p>
+<ul>
+<li>DiscardPolicy      直接丢弃任务，不予任何处理也不抛出异常。如果允许任务丢失，这是最好的一种方案。</li>
+</ul>
+<h5 id="15-3-2-线程池的工作队列"><a href="#15-3-2-线程池的工作队列" class="headerlink" title="15.3.2 线程池的工作队列"></a>15.3.2 线程池的工作队列</h5><ul>
+<li><p>ArrayBlockingQueue （有界队列）</p>
+</li>
+<li><p>LinkedBlockingQueue （无界队列）可以指定对立的大小，也可以不指定，默认类似一个无限大小的容量（Integer.MAX_VALUE）</p>
+</li>
+<li><p>SynchronousQueue（同步队列） 不存储元素，每个插入操作必须等到另一个线程调用移除操作，否则插入操作一直处于阻塞状态， 吞吐量通常要高于LinkedBlockingQueue</p>
+</li>
+<li><p>DelayQueue（延迟队列） 一个任务定时周期的延迟执行的队列。根据指定的执行时间从小到大排序，否则根据插入到队列的先后排序</p>
+</li>
+<li><p>PriorityBlockingQueue（优先级队列）</p>
+</li>
+</ul>
+<p>有界队列即长度有限，满了以后ArrayBlockingQueue会插入阻塞。无界队列就是里面能放无数的东西而不会因为队列长度限制被阻塞，但是可能会出现OOM异常。</p>
+<h4 id="15-4-线程池的提交与关闭方法"><a href="#15-4-线程池的提交与关闭方法" class="headerlink" title="15.4 线程池的提交与关闭方法"></a>15.4 线程池的提交与关闭方法</h4><ul>
+<li>threadPool.execute(Runnable task) 提交无返回值的方法</li>
+<li>threadPool.submit(Callable task) 提交有返回值的方法，返回一个future对象</li>
+<li>threadPool.shutdown() 等待任务执行完关闭</li>
+<li>threadPool.shutdownNow() 立即关闭</li>
+</ul>
+<h4 id="15-5-线程池的底层工作原理"><a href="#15-5-线程池的底层工作原理" class="headerlink" title="15.5 线程池的底层工作原理"></a>15.5 线程池的底层工作原理</h4><ul>
+<li><p>在创建线程池后，等待提交过来的任务请求。</p>
+</li>
+<li><p>调用execute()方法提交一个新任务到线程池，处理流程：</p>
+<ul>
+<li>判断核心线程池里的线程是否都在执行任务。如果不是，则创建一个新的工作线程执行任务。</li>
+<li>判断工作队列是否已满，如果工作队列没有满，则将新提交的任务存储在这个工作队列里。</li>
+<li>判断线程池的线程是否都处于工作状态。如果没有，则创建新的工作线程来执行任务。如果满了，则交给饱和策略来处理这个任务。</li>
+</ul>
+</li>
+<li><p>当一个线程完成任务时，它会从队列中取下一个任务来执行。</p>
+</li>
+<li><p>当一个线程无事可做超过一定的时间（keepAliveTime）时，线程池会判断：</p>
+</li>
+<li><p>如果当前运行的线程数大于corePoolSize，那么这个线程就被停掉。</p>
+</li>
+<li><p>所以当线程池的所有任务完成后，它最终会收缩到corePoolSize的大小。</p>
+</li>
+</ul>
+<p>以ThreadPoolExecutor执行execute方法举例，分为4种情况：</p>
+<ul>
+<li><p>如果当前运行线程数少于corePoolSize，则创建新线程来执行任务</p>
+</li>
+<li><p>如果运行的线程等于或多余corePoolSize，则将任务加入BlockingQueue</p>
+</li>
+<li><p>如果BlockingQueue已满，则创建新的线程来处理任务</p>
+</li>
+<li><p>如果创建新线程将使当前运行的线程超出maximumPoolSize，任务将被拒绝，并调用对应的策略</p>
+</li>
+</ul>
+<p>工作线程：线程池创建线程时，会将线程封装成工作线程Worker，Worker在执行完任务后，还会循环获取工作队列里 的任务来执行。</p>
+<h4 id="15-6-使用线程池的风险"><a href="#15-6-使用线程池的风险" class="headerlink" title="15.6 使用线程池的风险"></a>15.6 使用线程池的风险</h4><ul>
+<li>死锁：线程池引入了另一种死锁可能，所有池程都在执行已阻塞的等待队列中另一任务的执行结果的任务，但这一任务却因为没有未被占用的线程而不能运行。</li>
+<li>资源不足</li>
+<li>并发错误</li>
+<li>线程泄漏：当从池中一个线程执行任务后该线程却没有返回池时，会发生这种情况。</li>
+<li>请求过载</li>
+</ul>
+<h4 id="15-7-创建线程池的工具类-Executors"><a href="#15-7-创建线程池的工具类-Executors" class="headerlink" title="15.7 创建线程池的工具类 : Executors"></a>15.7 创建线程池的工具类 : Executors</h4><table>
+<thead>
+<tr>
+<th align="left">线程池种类</th>
+<th align="center">特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">newFixedThreadPool()</td>
+<td align="center">创建固定大小的线程池，核心线程数和最大线程数大小一样，keepAliveTime为0，阻塞队列是LinkedBlockingQueue，处理CPU密集型的任务。</td>
+</tr>
+<tr>
+<td align="left">newCachedThreadPool()</td>
+<td align="center">核心线程数为0，最大线程数为Integer.MAX_VALUE，keepAliveTime为60s，阻塞队列是SynchronousQueue，并发执行大量短期的小任务。</td>
+</tr>
+<tr>
+<td align="left">newSingleThreadExecutor()</td>
+<td align="center">创建单个线程池。核心线程数和最大线程数大小一样且都是1，keepAliveTime为0，阻塞队列是LinkedBlockingQueue，按添加顺序串行执行任务。</td>
+</tr>
+<tr>
+<td align="left">newScheduledThreadPool()</td>
+<td align="center">创建固定大小的线程，最大线程数为Integer.MAX_VALU，阻塞队列是DelayedWorkQueue</td>
+</tr>
+</tbody></table>
+<p>注意：</p>
+<ul>
+<li>FixedThreadPool 和 SingleThreadPool允许的请求队列（底层实现是LinkedBlockingQueue）长度为Integer.MAX_VALUE，可能会堆积大量的请求，从而导致OOM</li>
+<li>CachedThreadPool 和 ScheduledThreadPool 允许的创建线程数量为Integer.MAX_VALUE，可能会创建大量的线程，从而导致OOM。</li>
+</ul>
+</li>
+<li></li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B/" rel="tag"># 多线程</a>
+          
+            <a href="/tags/%E7%BA%BF%E7%A8%8B%E6%B1%A0/" rel="tag"># 线程池</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/" rel="next" title="JUC知识点总结（六）线程的生命周期">
+                <i class="fa fa-chevron-left"></i> JUC知识点总结（六）线程的生命周期
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89Synchronized%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/" rel="prev" title="JUC知识点总结（二）Synchronized底层原理总结">
+                JUC知识点总结（二）Synchronized底层原理总结 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#15-线程池"><span class="nav-number">1.</span> <span class="nav-text">15. 线程池</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#15-1-为什么要使用线程池？"><span class="nav-number">1.1.</span> <span class="nav-text">15.1 为什么要使用线程池？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#15-2-线程池的体系结构："><span class="nav-number">1.2.</span> <span class="nav-text">15.2 线程池的体系结构：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#15-3-创建线程池的方法"><span class="nav-number">1.3.</span> <span class="nav-text">15.3 创建线程池的方法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#15-3-1-线程池的拒绝策略"><span class="nav-number">1.3.1.</span> <span class="nav-text">15.3.1 线程池的拒绝策略</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#15-3-2-线程池的工作队列"><span class="nav-number">1.3.2.</span> <span class="nav-text">15.3.2 线程池的工作队列</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#15-4-线程池的提交与关闭方法"><span class="nav-number">1.4.</span> <span class="nav-text">15.4 线程池的提交与关闭方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#15-5-线程池的底层工作原理"><span class="nav-number">1.5.</span> <span class="nav-text">15.5 线程池的底层工作原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#15-6-使用线程池的风险"><span class="nav-number">1.6.</span> <span class="nav-text">15.6 使用线程池的风险</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#15-7-创建线程池的工具类-Executors"><span class="nav-number">1.7.</span> <span class="nav-text">15.7 创建线程池的工具类 : Executors</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

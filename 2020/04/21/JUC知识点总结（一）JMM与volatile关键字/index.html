@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="多线程,JMM,volatile," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1. 并发的两个关键问题：线程间通信和线程间同步线程通信机制有两种：  共享内存：隐式通信，显式同步；  消息传递：显式通信，隐式同步。（Java的并发采用的是共享内存模型。）   2. JAVA内存模型：JMMJava虚拟机规范试图定义一个Java内存模型(JMM)，以屏蔽所有类型的硬件和操作系统内存访问差异，让Java程序在不同的平台上能够达到一致的内存访问效果。简单地说，由于CPU执行指令的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JMM与volatile关键字">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="1. 并发的两个关键问题：线程间通信和线程间同步线程通信机制有两种：  共享内存：隐式通信，显式同步；  消息传递：显式通信，隐式同步。（Java的并发采用的是共享内存模型。）   2. JAVA内存模型：JMMJava虚拟机规范试图定义一个Java内存模型(JMM)，以屏蔽所有类型的硬件和操作系统内存访问差异，让Java程序在不同的平台上能够达到一致的内存访问效果。简单地说，由于CPU执行指令的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://images2018.cnblogs.com/blog/1246845/201805/1246845-20180513105249914-1528686620.png">
+<meta property="article:published_time" content="2020-04-21T08:56:05.000Z">
+<meta property="article:modified_time" content="2020-04-21T06:32:01.118Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="多线程">
+<meta property="article:tag" content="JMM">
+<meta property="article:tag" content="volatile">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://images2018.cnblogs.com/blog/1246845/201805/1246845-20180513105249914-1528686620.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/JUC知识点总结（一）JMM与volatile关键字/"/>
+
+
+
+
+
+  <title>JMM与volatile关键字 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">JMM与volatile关键字</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/JUC/" itemprop="url" rel="index">
+                    <span itemprop="name">JUC</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="1-并发的两个关键问题：线程间通信和线程间同步"><a href="#1-并发的两个关键问题：线程间通信和线程间同步" class="headerlink" title="1. 并发的两个关键问题：线程间通信和线程间同步"></a>1. 并发的两个关键问题：线程间通信和线程间同步</h4><p>线程通信机制有两种：</p>
+<ul>
+<li><p>共享内存：隐式通信，显式同步；</p>
+</li>
+<li><p>消息传递：显式通信，隐式同步。（Java的并发采用的是共享内存模型。）</p>
+</li>
+</ul>
+<h4 id="2-JAVA内存模型：JMM"><a href="#2-JAVA内存模型：JMM" class="headerlink" title="2. JAVA内存模型：JMM"></a>2. JAVA内存模型：JMM</h4><p>Java虚拟机规范试图定义一个Java内存模型(JMM)，以屏蔽所有类型的硬件和操作系统内存访问差异，让Java程序在不同的平台上能够达到一致的内存访问效果。简单地说，由于CPU执行指令的速度很快，但是内存访问速度很慢，于是在CPU里加了好几层高速缓存。在Java内存模型中，对上述优化进行了一波抽象。JMM规定所有的变量都在主内存中，类似于上面提到的普通内存，每个线程又包含自己的工作内存，为了便于理解可以看成CPU上的寄存器或者高速缓存。因此，线程的操作都是以工作内存为主，它们只能访问自己的工作内存，并且在工作之前和之后，该值被同步回主内存。JMM是一种抽象的概念，它定义了线程和主内存之间的关系：线程之间的共享变量存储在主内存中，每个线程都有一个私有本地内存，本地内存中存储了该线程读/写共享变量的副本。</p>
+ <img src="https://images2018.cnblogs.com/blog/1246845/201805/1246845-20180513105249914-1528686620.png" alt="img" style="zoom:67%;" /> 
+
+<p><strong>JMM与JVM的区别：</strong></p>
+<ul>
+<li>JMM描述的是一组规则，围绕原子性、有序性和可见性展开；</li>
+<li>相似点：存在共享区域和私有区域</li>
+</ul>
+<p><strong>JMM对于同步的规定：</strong></p>
+<ul>
+<li><p>线程解锁前，必须把共享变量的值刷新回主内存。</p>
+</li>
+<li><p>线程加锁前，必须读取主内存的最新值到自己的工作内存。</p>
+</li>
+<li><p>加锁解锁是同一把锁。</p>
+</li>
+</ul>
+<p>由于JVM运行的实体是线程，而每个线程创建时JVM都会为其创建一个工作内存（有些地方称之为栈空间），工作内存是每个线程的私有数据区域。<strong>而Java内存模型规定所有变量都存储在主内存</strong>，主内存是共享内存区域，所有线程都可以访问。但<strong>线程对变量的操作（读取赋值等）必须在工作内存中进行</strong>，首先要将变量从主内存拷贝到自己的内存空间，然后对变量进行操作，操作完成后，再将变量写回主内存，<strong>不能直接操作主内存中的变量</strong>。<strong>各个线程的工作内存中存储着主内存中的变量副本拷贝，因此不同的线程间无法访问对方的工作内存，线程间的通信（传值）必须通过主内存来完成。</strong></p>
+<p>JMM通过控制主内存与每个线程的本地内存之间的交互来为java程序员提供内存可见性保证。</p>
+<h4 id="3-指令重排序"><a href="#3-指令重排序" class="headerlink" title="3. 指令重排序"></a>3. 指令重排序</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">graph LR</span><br><span class="line">A(源码) --&gt; B[编译器优化重排序]</span><br><span class="line">B(编译器优化重排序)--&gt; C(指令级并行重排序)</span><br><span class="line">C(指令级并行重排序)--&gt; D(内存系统重排序)</span><br><span class="line">D(内存系统重排序)--&gt;E(最终的指令序列)</span><br></pre></td></tr></table></figure>
+
+<p>编译器和处理器不会对存在数据依赖关系的操作做重排序，因为这种重排序会改变执行结果。<strong>在单线程程序中，对存在控制依赖的操作重排序不会改变执行结果；但在多线程程序中，对存在控制 依赖的操作重排序，可能会改变程序的执行结果。</strong></p>
+<p>对于编译器，JMM的编译器会禁止特定类型的编译器重排序。<strong>对于处理器重排序，JMM的处理器重排序规则会要求Java编译器在生成指令序列时，插入特定的内存屏障指令，从而禁止特定类型的处理器重排序。</strong></p>
+<ul>
+<li><p>并发模型分类</p>
+<p>四种内存屏障：LoadLoad, StoreStore, LoadStore, StoreLoad</p>
+</li>
+<li><p>先行发生（happens-before）</p>
+<p>JMM中，如果一个操作执行的结果需要对另一个操作可见，那么这两个操作之间必须存在happens-before关系。</p>
+</li>
+</ul>
+<h4 id="4-原子操作的实现原理"><a href="#4-原子操作的实现原理" class="headerlink" title="4. 原子操作的实现原理"></a>4. 原子操作的实现原理</h4><ul>
+<li><p>处理器实现原子操作</p>
+<p>（1）通过<strong>总线锁</strong>保证原子性：当一个处理器在<strong>总线上输出LOCK #信号</strong>时，<strong>其他处理器的请求将被阻塞</strong>住，那么该处理器可以<strong>独占共享内存</strong>。</p>
+<p>（2）使用<strong>缓存锁</strong>保证原子性：内存区域如果被缓存在处理器的缓存行中，并且在LOCK期间被锁定，那么当他执行锁操作会写到内存时，处理器不在总线上声言LOCK #信号，而是修改内部的内存地址，并允许它的<strong>缓存一致性机制来保证操作的原子性</strong>，因为<strong>缓存一致性机制会阻止同时修改由两个以上处理器缓存的内存区域数据，当其他处理器回写已被锁定的缓存行的数据时，会使缓存行无效</strong>。</p>
+</li>
+<li><p><strong>Java实现原子操作（锁和循环CAS）</strong></p>
+<p><strong>循环CAS机制(Compare and Swap)</strong>  自旋CAS：循环进行CAS操作直至成功为止</p>
+<p>CAS (Compare-And-Swap) 是一种硬件对并发的支持，针对多处理器操作而设计的处理器中的一种特殊指令，用于管理对共享数据的并发访问。CAS 是一种无锁的非阻塞算法的实现。  </p>
+<p>CAS有3个操作数，内存值V，旧的预期值A，要修改的新值B。当且仅当预期值A和内存值V相同时，将内存值V修改为B，否则什么都不做。</p>
+<ul>
+<li><p><strong>CAS实现原子操作的三大问题：</strong></p>
+<p>（1）<strong>ABA问题</strong>：A到B再到A，CAS检查值时会以为没有发生变化，实际却发生了变化。（解决方式：在变量前面追加版本号，时间戳原子引用：AtomicStampedReference类）</p>
+<p>（2）<strong>循环时间长开销大</strong>：自旋CAS如果长时间不成功，会给CPU带来非常大的执行开销</p>
+<p>（3）<strong>只能保证一个共享变量的原子操作</strong>（此时用锁或者将几个共享变量合并）</p>
+</li>
+</ul>
+</li>
+<li><p>锁机制：偏向锁、轻量级锁和互斥锁，除了偏向锁，另外两种锁都使用了循环CAS机制，即当一个线程进入同步块的时候使用循环CAS的方式 获取锁，当他退出同步块的时候使用循环CAS释放锁。</p>
+</li>
+</ul>
+<h4 id="5-死锁"><a href="#5-死锁" class="headerlink" title="5.死锁"></a>5.死锁</h4><p>代码示例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deadLock</span><span class="params">()</span> throw Exception</span>&#123;</span><br><span class="line">    Object A = <span class="keyword">new</span> Object();</span><br><span class="line">    Object B = <span class="keyword">new</span> Object();</span><br><span class="line">	<span class="keyword">new</span> Thread(()-&gt;&#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(A)&#123;</span><br><span class="line">        	System.out.println(<span class="string">"get LockA"</span>);</span><br><span class="line">            <span class="keyword">try</span>&#123;</span><br><span class="line">                Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">            &#125;<span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;            </span><br><span class="line">        	<span class="keyword">synchronized</span>(B)&#123;</span><br><span class="line">            	System.out.println(<span class="string">"get LockA and LockB"</span>);</span><br><span class="line">        	&#125;</span><br><span class="line">    	&#125;</span><br><span class="line">    &#125;,<span class="string">"thread-1"</span>).start();</span><br><span class="line">    <span class="keyword">new</span> Thread(()-&gt;&#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(B)&#123;</span><br><span class="line">        	System.out.println(<span class="string">"get LockB"</span>);</span><br><span class="line">            <span class="keyword">try</span>&#123;</span><br><span class="line">                Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">            &#125;<span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;   </span><br><span class="line">        	<span class="keyword">synchronized</span>(A)&#123;</span><br><span class="line">            	System.out.println(<span class="string">"get LockB and LockA"</span>);</span><br><span class="line">        	&#125;</span><br><span class="line">    	&#125;</span><br><span class="line">    &#125;,<span class="string">"thread-2"</span>).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>避免死锁的几个常见方法：</p>
+<ul>
+<li>避免一个线程获取多个锁</li>
+<li>避免一个线程在锁内同时占用多个资源，尽量保证每个锁只占用一个资源</li>
+<li>尝试使用定时锁，使用lock.tryLock(timeout)来替代使用内部锁机制</li>
+<li>对于数据库锁，加锁和解锁必须在一个数据库连接里，否则会出现解锁失败的情况</li>
+</ul>
+<h4 id="6-volatile关键字"><a href="#6-volatile关键字" class="headerlink" title="6. volatile关键字"></a>6. volatile关键字</h4><p><strong>volatile是一种轻量级的同步方法，只能保证可见性，比synchronized的使用和执行成本更低， 因为它不会引起线程上下文的切换和调度</strong></p>
+<ul>
+<li><p><strong>volatile的特性</strong></p>
+<p><strong>保证了不同线程对这个变量进行操作时的可见性。（实现可见性</strong>）</p>
+<p><strong>禁止进行指令重排序。（实现有序性）</strong></p>
+<p><strong>volatile 只能保证对单次读/写的原子性。i++ 这种操作不能保证原子性。</strong></p>
+</li>
+<li><p><strong>volatile写-读的内存语义</strong></p>
+<p><strong>写：当写一个volatile变量时，JMM会把线程对应的本地内存中的共享变量值刷新到主内存；</strong></p>
+<p><strong>读：当读一个volatile变量时，JMM会把该线程对应的本地内存置为无效。线程接下来从主内存中读取共享变量。</strong></p>
+<p><strong>内存语义的实现</strong>：为了实现volatile的内存语义，编译器在生成字节码时，会<strong>在指令序列中插入内存屏障来禁止特定类型的处理器重排序</strong>。</p>
+<p>JMM内存屏障插入策略：在每个volatile写操作前面插入StoreStore屏障；在每个volatile写操作后面插入StoreLoad屏障；在每个volatile读操作后面插入一个LoadLoad、一个LoadStore</p>
+</li>
+</ul>
+<p><strong>volatile实现原理</strong></p>
+<p><strong>有volatile变量修饰符的共享变量进行写操作的时候会多出一个lock前缀的指令</strong>，lock前缀的指令在多核处理器中引发两件事情</p>
+<ul>
+<li><strong>将当前处理器缓存行的数据写回内存</strong></li>
+<li><strong>这个写回内存的操作会使在其他CPU里缓存了该内存地址的数据无效</strong></li>
+</ul>
+<p>为了提高处理速度，处理器不直接和内存通信，而是先将内存中的数据读到cache中再进行操作，但操作完全不知道何时会写到内存。如果对声明了volatile变量的进行写操作 ，JVM就会向处理器发送一条Lock前缀的指令，将这个变量所在缓存行的数据写回到系统内存。 但是，就算写回到内存，如果其他处理器缓存的值还是旧的，再进行计算操作就会有问题。所以，多处理器下，要实行<strong>缓存一致性协议</strong>，每个处理器通过<strong>嗅探在总线上传播的数据来检查自己缓存的值是不是过期，如果过期，就将当前处理器的缓存行设置成无效状态，当处理器对这个数据进行修改操作的时候，会重新从系统内存中把数据读到处理器缓存中。</strong></p>
+<p><strong>处理器指令 — Lock前缀：</strong></p>
+<pre><code>(1) 确保对内存的读-改-写操作原子执行，使用缓存锁定来保证
+
+(2) 禁止该指令与之前和之后的读和写指令重排序
+
+(3) 把写缓冲区的所有数据刷新到内存中</code></pre><p><strong>解决volatile不保证原子性的办法:  java.util.concurrent.atomic</strong></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B/" rel="tag"># 多线程</a>
+          
+            <a href="/tags/JMM/" rel="tag"># JMM</a>
+          
+            <a href="/tags/volatile/" rel="tag"># volatile</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/" rel="next" title="JAVA虚拟机浅析">
+                <i class="fa fa-chevron-left"></i> JAVA虚拟机浅析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/KMP%E7%AE%97%E6%B3%95%E7%9A%84JAVA%E5%AE%9E%E7%8E%B0/" rel="prev" title="KMP算法的JAVA实现">
+                KMP算法的JAVA实现 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-并发的两个关键问题：线程间通信和线程间同步"><span class="nav-number">1.</span> <span class="nav-text">1. 并发的两个关键问题：线程间通信和线程间同步</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-JAVA内存模型：JMM"><span class="nav-number">2.</span> <span class="nav-text">2. JAVA内存模型：JMM</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-指令重排序"><span class="nav-number">3.</span> <span class="nav-text">3. 指令重排序</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-原子操作的实现原理"><span class="nav-number">4.</span> <span class="nav-text">4. 原子操作的实现原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-死锁"><span class="nav-number">5.</span> <span class="nav-text">5.死锁</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#6-volatile关键字"><span class="nav-number">6.</span> <span class="nav-text">6. volatile关键字</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

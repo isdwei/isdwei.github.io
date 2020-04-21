@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="JVM,JAVA,垃圾回收," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="JAVA虚拟机浅析1.  JAVA内存区域与内存管理     JVM 内存分哪几个区，每个区的作用是什么?    运行时数据区：  程序计数器  当前线程所执行字节码的行号指示器； 空间线程私有，各线程有自己独立的程序计数器，互不干扰； 执行Java方法时，计数器记录正在执行的字节码地址，执行本地方法时，计数器值为空（Undefined）,该区域不存在OOM。   Java虚拟机栈  栈帧存储局部">
+<meta property="og:type" content="article">
+<meta property="og:title" content="JAVA虚拟机浅析">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="JAVA虚拟机浅析1.  JAVA内存区域与内存管理     JVM 内存分哪几个区，每个区的作用是什么?    运行时数据区：  程序计数器  当前线程所执行字节码的行号指示器； 空间线程私有，各线程有自己独立的程序计数器，互不干扰； 执行Java方法时，计数器记录正在执行的字节码地址，执行本地方法时，计数器值为空（Undefined）,该区域不存在OOM。   Java虚拟机栈  栈帧存储局部">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="c:/Users/weitu/AppData/Roaming/Typora/typora-user-images/1583499543544.png">
+<meta property="og:image" content="c:/Users/weitu/AppData/Roaming/Typora/typora-user-images/1583487814854.png">
+<meta property="og:image" content="c:%5CUsers%5Cweitu%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1583497124691.png">
+<meta property="og:image" content="c:/Users/weitu/AppData/Roaming/Typora/typora-user-images/1583501265277.png">
+<meta property="og:image" content="c:%5CUsers%5Cweitu%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1583509016437.png">
+<meta property="og:image" content="c:/Users/weitu/AppData/Roaming/Typora/typora-user-images/1583732055511.png">
+<meta property="og:image" content="c:/Users/weitu/AppData/Roaming/Typora/typora-user-images/1583737170987.png">
+<meta property="article:published_time" content="2020-04-21T08:56:05.000Z">
+<meta property="article:modified_time" content="2020-04-21T06:32:21.913Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="JVM">
+<meta property="article:tag" content="JAVA">
+<meta property="article:tag" content="垃圾回收">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="c:/Users/weitu/AppData/Roaming/Typora/typora-user-images/1583499543544.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/JAVA虚拟机浅析/"/>
+
+
+
+
+
+  <title>JAVA虚拟机浅析 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">JAVA虚拟机浅析</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/JVM/" itemprop="url" rel="index">
+                    <span itemprop="name">JVM</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="JAVA虚拟机浅析"><a href="#JAVA虚拟机浅析" class="headerlink" title="JAVA虚拟机浅析"></a>JAVA虚拟机浅析</h2><h5 id="1-JAVA内存区域与内存管理"><a href="#1-JAVA内存区域与内存管理" class="headerlink" title="1.  JAVA内存区域与内存管理"></a>1.  JAVA内存区域与内存管理</h5><img src="C:\Users\weitu\AppData\Roaming\Typora\typora-user-images\1583499543544.png" alt="1583499543544" style="zoom:55%;" />
+
+<blockquote>
+<p>  JVM 内存分哪几个区，每个区的作用是什么?  </p>
+</blockquote>
+<p>运行时数据区：</p>
+<ul>
+<li><p>程序计数器</p>
+<ul>
+<li>当前线程所执行字节码的行号指示器；</li>
+<li>空间线程私有，各线程有自己独立的程序计数器，互不干扰；</li>
+<li>执行Java方法时，计数器记录正在执行的字节码地址，执行本地方法时，计数器值为空（Undefined）,该区域不存在OOM。</li>
+</ul>
+</li>
+<li><p>Java虚拟机栈</p>
+<ul>
+<li><p>栈帧存储局部变量（基本数据类型、引用类型和returnAdderss类型【指向一条字节码指令的地址】）、操作数栈、动态链接、方法出口信息；</p>
+</li>
+<li><p>空间线程私有，各线程有自己独立的栈帧，每个线程栈的大小 -Xss  设置；</p>
+</li>
+<li><p>线程请求的栈深度大于虚拟机所允许的深度：SOE（StackOverFlow Exception）；</p>
+<p>虚拟机栈动态扩展时无法申请到足够的内存：OOM（OutOfMemoryError）。</p>
+</li>
+</ul>
+</li>
+<li><p>本地方法栈</p>
+<ul>
+<li>为虚拟机存储的Native方法服务。线程私有，（OOM，SOE也都存在）。</li>
+</ul>
+</li>
+<li><p>Java堆</p>
+<ul>
+<li>存放对象实例，大小（-Xms，-Xmx）设置，OOM，线程共享</li>
+<li>新生代【伊甸区Eden，幸存区（Survivorfrom,Survivorto）】+老年代</li>
+</ul>
+</li>
+<li><p>方法区（永久代/元空间）</p>
+<ul>
+<li><p>已被虚拟机加载的类信息、常量、静态变量</p>
+</li>
+<li><p>运行时常量池：（方法区的一部分）</p>
+<ul>
+<li><p>Byte,Short,Integer,Long,Character,Boolean种包装类默认创建了数值[-128，127]的相应类型的缓存数据，但是超出此范围仍然会去创建新的对象。 </p>
+</li>
+<li><p>String类型通过new创建会分配在堆中，通过“ ”创建分配在常量池中；</p>
+<p>由只包含“ ”创建的String和+组成的String会被存放在常量池中；</p>
+<p>String的intern()方法会查找常量池中是否存在一份equal相等的字符串，如果有则返回引用，如果没有则将自己添加如常量池</p>
+<blockquote>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">String s1 = <span class="keyword">new</span> String(<span class="string">"xyz"</span>); <span class="comment">//创建了几个对象？</span></span><br></pre></td></tr></table></figure>
+</blockquote>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>“xyz”在类加载时已经创建于常量池，运行时将常量池的对象复制一份到堆中，引用交给s1持有。</p>
+</blockquote>
+<ul>
+<li><p>直接内存（堆外内存）</p>
+<ul>
+<li>使用Native函数库直接使用本机内存，不受JVM限制，但也会存在OOM</li>
+</ul>
+</li>
+</ul>
+<h5 id="2-垃圾收集策略"><a href="#2-垃圾收集策略" class="headerlink" title="2.垃圾收集策略"></a>2.垃圾收集策略</h5><blockquote>
+<p>如何判断对象需要回收？</p>
+</blockquote>
+<ul>
+<li><p>引用计数算法：  给对象中添加一个引用计数器， 每当有一个地方引用它时， 计数器值就加1； 当引用失效时， 计数器值就减1； 任何时刻计数器为0的对象就是不可能再被使用的。  </p>
+<p>难以解决循环引用问题！（给个例子）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">A.instance=B;</span><br><span class="line">B.instance=A;</span><br><span class="line">A=<span class="keyword">null</span>;</span><br><span class="line">B=<span class="keyword">null</span>;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>可达性分析算法（Java，C#）：  当一个对象到GC Roots没有任何引用链相连时， 则证明此对象是不可用的。</p>
+<p>可以作为GCRoot的对象：</p>
+<ul>
+<li>虚拟机栈或本地方法栈中引用的对象；</li>
+<li>方法区中类静态属性或常量引用的对象。</li>
+</ul>
+</li>
+</ul>
+<h5 id="3-强引用，软引用，弱引用和虚引用"><a href="#3-强引用，软引用，弱引用和虚引用" class="headerlink" title="3.强引用，软引用，弱引用和虚引用"></a>3.强引用，软引用，弱引用和虚引用</h5><img src="C:\Users\weitu\AppData\Roaming\Typora\typora-user-images\1583487814854.png" alt="1583487814854" style="zoom: 67%;" />
+
+<ul>
+<li><p>强引用：不会被回收，Object obj = new Object()；</p>
+</li>
+<li><p>软引用：有用但并非必须，在即将OOM时会被回收，Java提供SoftReference类实现软引用；</p>
+</li>
+<li><p>弱引用：只能存活到下一次垃圾回收之前，WeakReference类实现；</p>
+<blockquote>
+<p>什么是WeakHashMap</p>
+</blockquote>
+</li>
+<li><p>虚引用：无法通过虚引用取得一个对象实例，唯一作用在于虚引用关联的对象在被垃圾回收时会受到一个系统通知，PhantomReference类实现。</p>
+</li>
+</ul>
+<h5 id="4-确定需要被回收的对象"><a href="#4-确定需要被回收的对象" class="headerlink" title="4.确定需要被回收的对象"></a>4.确定需要被回收的对象</h5><blockquote>
+<p>不可达的对象都会被回收吗</p>
+</blockquote>
+<p>一个对象的死亡至少经历两次标记的过程：</p>
+<ol>
+<li>可达性分析发现没有与GCRoot连接的引用，则会被第一次标记并进行一次筛选，筛选的条件时是否有必要执行finalize()方法。若对象没有覆盖finalize()方法或finalize() 方法已经被虚拟机调用过，则他们都被认为“没有必要执行”；</li>
+<li>对象被判定有必要执行finalize()后，会被放入F-Queue队列。GC会对F-Queue中的对象第二次标记，若对象在finalize()中重新被引用（如通过this被赋值），则会被移除处队列中。</li>
+</ol>
+<ul>
+<li>finalize()只能被调用一次</li>
+<li>finalize()不是析构函数，不建议使用（推荐try…finally…）</li>
+</ul>
+<h5 id="5-回收方法区"><a href="#5-回收方法区" class="headerlink" title="5.回收方法区"></a>5.回收方法区</h5><blockquote>
+<p>方法区会发生垃圾回收吗</p>
+</blockquote>
+<p>Java虚拟机规范中不要求虚拟机回收方法区。</p>
+<p>方法区的回收包括：废弃常量和无用的类</p>
+<ul>
+<li>判断废弃常量也是可达性分析</li>
+<li>判断无用的类：<ul>
+<li>该类所有实例被回收</li>
+<li>加载该类的ClassLoader被回收</li>
+<li>该类对应的java.lang.Class对象没有被引用，无法通过反射访问该类的方法</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>对与大量使用反射、动态代理的框架，频繁自定义ClassLoader的场景都需要虚拟机具备类卸载功能，保证方法区不会溢出。</p>
+</blockquote>
+<h5 id="6-垃圾收集算法"><a href="#6-垃圾收集算法" class="headerlink" title="6.垃圾收集算法"></a>6.垃圾收集算法</h5><h6 id="6-1-标记清除算法（Mark-Sweep）"><a href="#6-1-标记清除算法（Mark-Sweep）" class="headerlink" title="6.1 标记清除算法（Mark-Sweep）"></a>6.1 标记清除算法（Mark-Sweep）</h6><p>首先标记处需要回收的对象（见4），再统一回收所有被标记的对象。</p>
+<p>特点：</p>
+<ul>
+<li>效率低（标记和清除过程效率都低）；</li>
+<li>会产生大量不连续的空间碎片。</li>
+</ul>
+<h6 id="6-2-复制算法（Copying）"><a href="#6-2-复制算法（Copying）" class="headerlink" title="6.2 复制算法（Copying）"></a>6.2 复制算法（Copying）</h6><p>将可用内存按容量划分为两块，每次只是用一块。当这块内存用完了，就将活着的对象复制到另一块，已使用的内存空间一次性清理掉。</p>
+<p>特点：</p>
+<ul>
+<li>无内存碎片，简单高效；</li>
+<li>内存缩小为一半，代价较高。</li>
+</ul>
+<h6 id="6-3-标记整理算法（Mark-Compact）"><a href="#6-3-标记整理算法（Mark-Compact）" class="headerlink" title="6.3 标记整理算法（Mark-Compact）"></a>6.3 标记整理算法（Mark-Compact）</h6><p>标记需要回收的对象，将所有存活的对象向一端移动，直接清理掉边界外的内存。</p>
+<p>特点：</p>
+<ul>
+<li>没有内存碎片</li>
+<li>需要移动对象的成本</li>
+</ul>
+<h6 id="6-4-分代收集算法"><a href="#6-4-分代收集算法" class="headerlink" title="6.4 分代收集算法"></a>6.4 分代收集算法</h6><h5 id="7-垃圾收集器"><a href="#7-垃圾收集器" class="headerlink" title="7. 垃圾收集器"></a>7. 垃圾收集器</h5><ul>
+<li><p>Serial收集器（新生代，老年代有不同的版本）</p>
+<ul>
+<li>新生代（Serial New）复制算法，老年代(Serial Old)采用标记-整理算法；</li>
+<li>单线程，工作时会暂停其他所有工作线程（“Stop The World”）。</li>
+<li>开启参数： -XX: +UseSerialGC 开启后新生代使用Serial New，老年代使用Serial Old。</li>
+</ul>
+</li>
+<li><p>ParNew收集器 (即Parallel for New Generation)</p>
+<ul>
+<li><p>多线程工作，原理与Serial一样</p>
+</li>
+<li><p>开启参数： -XX: +UseParNewGC ，开启后新生代使用ParNew（复制算法），老年代使用Serial Old（标记-整理算法），默认开启与CPU数目相同的线程数。</p>
+<p>这种组合JDK8中已被deprecated。</p>
+</li>
+</ul>
+</li>
+<li><p>Parallel Scavenge收集器（新生代）</p>
+<ul>
+<li>多线程工作，吞吐量优先原则；</li>
+<li>自适应调节策略：虚拟机会根据当前系统运行情况动态调整参数来提供最合适的停顿时间或最大吞吐量；</li>
+<li>开启参数：-XX: +UseParallelGC或-XX：+UseParallelOldGC，新生代复制算法，老年代使用ParOld收集器（标记-整理算法）</li>
+</ul>
+</li>
+<li><p>并发标记清除垃圾收集器（CMS，Concurrent Mark Sweep）</p>
+<ul>
+<li><p>用户线程和垃圾收集线程同时执行（并发，可能是交替执行），目的是获得最短停顿时间；</p>
+<p>会产生内存碎片；</p>
+</li>
+<li><p>采用标记-清除算法；</p>
+</li>
+<li><p>开启参数：+XX: +UseConcMarkSweeoGC，开启后新生代使用ParNew，老年代使用CMS（Serial Old作为后备收集器）</p>
+</li>
+<li><p>初始标记(Stop) —&gt; 并发标记(并发) —&gt; 重新标记(Stop)- —-&gt; 并发清除（并发）</p>
+<p><img src="C:%5CUsers%5Cweitu%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1583497124691.png" alt="1583497124691"></p>
+</li>
+</ul>
+</li>
+<li><p>G1垃圾收集器 见9</p>
+</li>
+</ul>
+<blockquote>
+<p>如何选择垃圾收集器?</p>
+<p>单CPU，小内存：SerialGC</p>
+<p>多CPU，大吞吐量：ParallelScavenge</p>
+<p>多CPU，快速响应：CMS</p>
+</blockquote>
+<h5 id="8-内存分配与回收策略"><a href="#8-内存分配与回收策略" class="headerlink" title="8. 内存分配与回收策略"></a>8. 内存分配与回收策略</h5><img src="C:\Users\weitu\AppData\Roaming\Typora\typora-user-images\1583501265277.png" alt="1583501265277" style="zoom: 50%;" />
+
+<ul>
+<li><p>内存分配：</p>
+<ul>
+<li>堆内存分为新生代和老年代（默认1：2）</li>
+<li>新生代分为两部分：伊甸区和幸存区（幸存0区，幸存1区）（默认8：1：1）；</li>
+</ul>
+</li>
+<li><p>回收策略：</p>
+<ul>
+<li><p>新建对象优先在新生代Eden区分配；</p>
+</li>
+<li><p>大的对象直接放在老年代；</p>
+</li>
+<li><p>Eden区空间不够时会发生Minor GC：</p>
+<blockquote>
+<p>Minor GC的过程：复制—&gt;清空—&gt;互换</p>
+</blockquote>
+<ul>
+<li>Eden区满时触发第一次Minor GC，活着的对象拷贝到SurvivorFrom区；</li>
+<li>Eden区再次满时，再次触发Minor GC，将Eden区和From区活着的对象拷贝至To区，同时把这些对象的年龄+1；</li>
+<li>清空Eden和From区，将From区与To区互换；</li>
+<li>若一个对象（默认）交换15次后依旧存活，进入老年代。（年龄参数 MaxTenuringThreshold决定）</li>
+</ul>
+</li>
+<li><p>老年代内存满时Full GC/Major GC，Full GC 发生时必定伴随Minor GC。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h5 id="9-G1垃圾回收器"><a href="#9-G1垃圾回收器" class="headerlink" title="9. G1垃圾回收器"></a>9. G1垃圾回收器</h5><ul>
+<li><p>特点：</p>
+<ul>
+<li>适合多CPU，大内存环境，能尽量缩短STW; </li>
+<li>整体上标记-整理算法，局部复制算法，无内存碎片</li>
+<li>把内存划分为独立的子区域，每个区域保留新生代和老年代的区别，但不要求内存连续，每个区域可随着G1运行改变自己的角色，垃圾回收时避免了全内存扫描；</li>
+</ul>
+</li>
+<li><p>原理：</p>
+<p><img src="C:%5CUsers%5Cweitu%5CAppData%5CRoaming%5CTypora%5Ctypora-user-images%5C1583509016437.png" alt="1583509016437"></p>
+<p>G1收集器将堆分割成多个子区域（默认2014个分区），每个区域大小为2的整数次幂（-XX：G1HeapRegionSize=n，1MB~32MB），只有逻辑上的分代概念，物理上不再隔离（每个分区都可能随G1的运行在不同代之间切换）。</p>
+<p>Eden区耗尽时触发垃圾回收，暂停所有进程，并形成连续内存块；</p>
+<ul>
+<li>Eden区数据移动到Survivor区，若Survivor区空间不够，则Eden区数据全部晋升Old区；</li>
+<li>Survivor区数据移动到新的Survivor区，部分数据晋升Old区；</li>
+<li>最后Eden区收集完，GC结束</li>
+</ul>
+</li>
+<li><p>优点（与CMS相比）</p>
+<ul>
+<li><p>并发回收，整体上采用标记整理算法，局部采用复制算法。避免了全内存扫描，只需按照区域扫描；</p>
+</li>
+<li><p>可以控制停顿时间，每次根据允许停顿的时间去收集垃圾最多的区域。</p>
+</li>
+</ul>
+</li>
+<li><p>开启参数： XX: +UseG1GC</p>
+</li>
+</ul>
+<h5 id="10-虚拟机的加载机制"><a href="#10-虚拟机的加载机制" class="headerlink" title="10. 虚拟机的加载机制"></a>10. 虚拟机的加载机制</h5><ul>
+<li><p>类的生命周期</p>
+<img src="C:\Users\weitu\AppData\Roaming\Typora\typora-user-images\1583732055511.png" alt="1583732055511" style="zoom: 33%;" />
+
+<p>类的加载过程：</p>
+<ol>
+<li>加载：将类的c读取如内存，并存放在方法区；</li>
+<li>验证：确保Class文件的字节流符合虚拟机要求；</li>
+<li>准备：为类变量（static）分配内存设置初始值(0,ture,null)，如果类变量时final修饰，则赋给定值；</li>
+<li>解析 ：将常量池中的符号替换为直接引用；</li>
+<li>初始化：执行初始化代码</li>
+</ol>
+</li>
+<li><p>类的加载顺序：</p>
+<p>对于static关键字，他修饰的属性或方法是可以通过类来访问，当class文件被加载进内存开始初始化时，static变量/方法即被分配了内存，其他变量是在对象被创建后，才被分配内存的。所以在类中，加载顺序为：</p>
+<ol>
+<li><p>首先加载父类的静态字段或者静态语句块</p>
+</li>
+<li><p>子类的静态字段或静态语句块</p>
+</li>
+</ol>
+<p>//如果创建一个类的实例会继续执行以下：</p>
+<ol start="3">
+<li><p>父类普通变量以及语句块</p>
+</li>
+<li><p>父类构造方法被加载</p>
+</li>
+<li><p>子类变量或者语句块被加载</p>
+</li>
+<li><p>子类构造方法被加载</p>
+</li>
+</ol>
+</li>
+<li><p>类的初始化时机（即初始化类的静态变量，执行类的静态初始化方法）</p>
+<ol>
+<li>创建类的实例，也就是new一个对象 ；</li>
+<li>访问某个类或接口的静态变量、静态方法，或者对该静态变量赋值 ；</li>
+<li>反射（Class.forName(“  ”)）；</li>
+<li>初始化一个类的子类（会首先初始化子类的父类）； </li>
+<li>JVM启动时标明的启动类，即文件名和类名相同的那个类  ；</li>
+<li>当使用 JDK 1.7 的动态语言支持时，如果一个 java.lang.invoke.MethodHandle 实例最后的解析结果REF_getStatic、REF_putStatic、REF_invokeStatic 的方法句柄，并且这个方法句柄所对应的类没有进行过初始化，则需先触发其初始化。 </li>
+</ol>
+<p>不会初始化类的情况</p>
+<ol>
+<li>子类引用父类的静态字段，不会导致子类初始化；</li>
+<li>通过数组定义来引用类，不会触发类的初始化；</li>
+<li>引用一个类的常量，不会触发类的初始化。</li>
+</ol>
+</li>
+<li><p>类加载器</p>
+<ul>
+<li><p>双亲委派模型：  为了避免代码污染Java自带的程序，提供一种双亲委派机制以满足沙箱安全。</p>
+<p>如果一个类加载器收到了类加载的请求， 它首先不会自己去尝试加载这个类， 而是把这个请求委派给父类加载器去完成， 每一个层次的类加载器都是如此， 因此所有的加载请求最终都应该传送到顶层的启动类加载器中， 只有当父加载器反馈自己无法完成这个加载请求（ 它的搜索范围中没有找到所需的类）时， 子加载器才会尝试自己去加载  。</p>
+</li>
+<li><p>四类加载器</p>
+<p>启动类加载器（BootStrap ClassLoader） C++编写，java自带的类，JAVA_HOME/lib</p>
+<p>扩展类加载器（Extension ClassLoader）java后续增加的类，JAVA_HOME/lib/ext</p>
+<p>应用程序类加载器（Application ClassLoader）加载ClassPath路径上所指定的类库（默认类加载器）</p>
+<p>自定义类加载器（User ClassLoader)</p>
+<img src="C:\Users\weitu\AppData\Roaming\Typora\typora-user-images\1583737170987.png" alt="1583737170987" style="zoom: 33%;" />
+
+
+
+
+
+
+
+</li>
+</ul>
+</li>
+</ul>
+<h5 id="11-一些问题"><a href="#11-一些问题" class="headerlink" title="11. 一些问题"></a>11. 一些问题</h5><ul>
+<li><strong>STW是立即停止用户线程吗?为什么CMS要两次STW？</strong></li>
+</ul>
+<p>Stop The World（停顿类型STW）</p>
+<p>  <strong>我们知道垃圾回收首先是要经过标记的。对象被标记后就会根据不同的区域采用不同的收集方法。看上去很完美的一件事情，其实并不然。</strong><br>  大家有没有想过一件事情，当虚拟机完成两次标记后，便确认了可以回收的对象。但是，<strong>垃圾回收并不会阻塞我们程序的线程，他是与当前程序并发执行的</strong>。所以问题就出在这里，<strong>当GC线程标记好了一个对象的时候，此时我们程序的线程又将该对象重新加入了“关系网”中，当执行二次标记的时候，该对象也没有重写finalize()方法，因此回收的时候就会回收这个不该回收的对象。</strong><br>  <strong>虚拟机的解决方法就是在一些特定指令位置设置一些“安全点”，当程序运行到这些“安全点”的时候就会暂停所有当前运行的线程（Stop The World 所以叫STW），暂停后再找到“GC Roots”进行关系的组建，进而执行标记和清除。</strong> </p>
+<p>这些特定的指令<strong>（安全点）位置主要在</strong>：</p>
+<ul>
+<li>循环的末尾</li>
+<li>方法临返回前 / 调用方法的call指令后</li>
+<li>可能抛异常的位置</li>
+</ul>
+<p>  找到“GC Roots”也是要花很长的时间，然而这里又有新的解决方法，就是通过<strong>采用一个OopMap的数据结构来记录系统中存活的“GC Roots”</strong>，在类加载完成的时候，虚拟机就把对象内什么偏移量上是什么类型的数据计算出来保存在OopMap，通过解释OopMap就可以找到堆中的对象，这些对象就是GC Roots。而不需要一个一个的去判断某个内存位置的值是不是引用。这种方式也叫准确式GC。<br>  回到最开始的问题，那个<strong>停顿类型就是STW</strong>，至于<strong>有GC</strong>和<strong>Full GC</strong>之分，还有<strong>Full GC (System)</strong>。个人认为主要是Full GC时STW的时间相对GC来说时间很长，因为Full GC针对整个堆以及永久代的，因此整个GC的范围大大增加；还有就是他的回收算法就是我们之前说过的“标记–清除–整理”，这里也会损耗一定的时间。<strong>所以我们在优化JVM的时候，减少Full GC的次数也是经常用到的办法。</strong><br>  本文篇幅较短，主要为下一章要讲的收集器打下基石，各位只要知道GC之前还有STW这一步骤和知道OopMap以及安全点的存在即可。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/JVM/" rel="tag"># JVM</a>
+          
+            <a href="/tags/JAVA/" rel="tag"># JAVA</a>
+          
+            <a href="/tags/%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/" rel="tag"># 垃圾回收</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AD%EF%BC%89%E5%A4%9A%E7%BA%BF%E7%A8%8B%E9%87%8C%E7%9A%84HashMap%E4%B8%8EConcurrentHashMap%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/" rel="next" title="JUC知识点总结（六）多线程里的HashMap与ConcurrentHashMap源码分析">
+                <i class="fa fa-chevron-left"></i> JUC知识点总结（六）多线程里的HashMap与ConcurrentHashMap源码分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/" rel="prev" title="JMM与volatile关键字">
+                JMM与volatile关键字 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                
+                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-name">categories</span>
+                
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                
+                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-name">tags</span>
+                
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#JAVA虚拟机浅析"><span class="nav-number">1.</span> <span class="nav-text">JAVA虚拟机浅析</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-JAVA内存区域与内存管理"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">1.  JAVA内存区域与内存管理</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-垃圾收集策略"><span class="nav-number">1.0.0.2.</span> <span class="nav-text">2.垃圾收集策略</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-强引用，软引用，弱引用和虚引用"><span class="nav-number">1.0.0.3.</span> <span class="nav-text">3.强引用，软引用，弱引用和虚引用</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-确定需要被回收的对象"><span class="nav-number">1.0.0.4.</span> <span class="nav-text">4.确定需要被回收的对象</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-回收方法区"><span class="nav-number">1.0.0.5.</span> <span class="nav-text">5.回收方法区</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#6-垃圾收集算法"><span class="nav-number">1.0.0.6.</span> <span class="nav-text">6.垃圾收集算法</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#6-1-标记清除算法（Mark-Sweep）"><span class="nav-number">1.0.0.6.1.</span> <span class="nav-text">6.1 标记清除算法（Mark-Sweep）</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#6-2-复制算法（Copying）"><span class="nav-number">1.0.0.6.2.</span> <span class="nav-text">6.2 复制算法（Copying）</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#6-3-标记整理算法（Mark-Compact）"><span class="nav-number">1.0.0.6.3.</span> <span class="nav-text">6.3 标记整理算法（Mark-Compact）</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#6-4-分代收集算法"><span class="nav-number">1.0.0.6.4.</span> <span class="nav-text">6.4 分代收集算法</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#7-垃圾收集器"><span class="nav-number">1.0.0.7.</span> <span class="nav-text">7. 垃圾收集器</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#8-内存分配与回收策略"><span class="nav-number">1.0.0.8.</span> <span class="nav-text">8. 内存分配与回收策略</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#9-G1垃圾回收器"><span class="nav-number">1.0.0.9.</span> <span class="nav-text">9. G1垃圾回收器</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#10-虚拟机的加载机制"><span class="nav-number">1.0.0.10.</span> <span class="nav-text">10. 虚拟机的加载机制</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#11-一些问题"><span class="nav-number">1.0.0.11.</span> <span class="nav-text">11. 一些问题</span></a></li></ol></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
