@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hadoop,MapReduce,分布式," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="3. MapReduceTask工作流程整理自Hadoop技术内幕 3.1 概述MapReduce框架中，一个Task被分为Map和Reduce两个阶段，每个MapTask处理数据集合中的一个split并将产生的数据溢写入本地磁盘；而每个ReduceTask远程通过HTTP以pull的方式拉取相应的中间数据文件，经过合并计算后将结果写入HDFS。 3.2 MapTask 客户端提交任务，规划切片，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MapReduce的详细工作流程">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/apReduce%E7%9A%84%E8%AF%A6%E7%BB%86%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="3. MapReduceTask工作流程整理自Hadoop技术内幕 3.1 概述MapReduce框架中，一个Task被分为Map和Reduce两个阶段，每个MapTask处理数据集合中的一个split并将产生的数据溢写入本地磁盘；而每个ReduceTask远程通过HTTP以pull的方式拉取相应的中间数据文件，经过合并计算后将结果写入HDFS。 3.2 MapTask 客户端提交任务，规划切片，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20200410005649280.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20200410005703107.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center">
+<meta property="article:published_time" content="2020-04-21T15:54:24.000Z">
+<meta property="article:modified_time" content="2020-04-21T16:02:29.177Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="MapReduce">
+<meta property="article:tag" content="分布式">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img-blog.csdnimg.cn/20200410005649280.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/apReduce的详细工作流程/"/>
+
+
+
+
+
+  <title>MapReduce的详细工作流程 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/apReduce%E7%9A%84%E8%AF%A6%E7%BB%86%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MapReduce的详细工作流程</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:54:24+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="3-MapReduceTask工作流程"><a href="#3-MapReduceTask工作流程" class="headerlink" title="3. MapReduceTask工作流程"></a>3. MapReduceTask工作流程</h3><p>整理自Hadoop技术内幕</p>
+<h4 id="3-1-概述"><a href="#3-1-概述" class="headerlink" title="3.1 概述"></a>3.1 概述</h4><p>MapReduce框架中，一个Task被分为Map和Reduce两个阶段，每个MapTask处理数据集合中的一个split并将产生的数据溢写入本地磁盘；而每个ReduceTask远程通过HTTP以pull的方式拉取相应的中间数据文件，经过合并计算后将结果写入HDFS。</p>
+<h4 id="3-2-MapTask"><a href="#3-2-MapTask" class="headerlink" title="3.2 MapTask"></a>3.2 MapTask</h4><p><img src="https://img-blog.csdnimg.cn/20200410005649280.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
+<p>客户端提交任务，规划切片，并将切片文件，程序jar包与任务配置文件上传，Hadoop集群分配节点执行任务；</p>
+<ul>
+<li><p><strong>Read阶段</strong>：MapTask按InputFormat中定义的方法将数据读取如内存；</p>
+</li>
+<li><p><strong>Map阶段</strong>：将内存中的数据按map()函数定义的方法处理成K-V对的形式；</p>
+</li>
+<li><p><strong>Collect阶段</strong>：将K-V对的数据与索引向两个方向写入环形缓冲区（默认100M大小）；</p>
+<ul>
+<li><p>调用Partitioner.getPartition()获取记录的分区号，再将&lt;key,value,partition&gt;传给MapOutputBuffer.collect()做进一步处理；</p>
+</li>
+<li><p>MapOutputBuffer内部使用了一个缓冲区暂时存储用户输出数据。几种不同的缓冲区优劣：</p>
+<ul>
+<li>单向缓冲区：生产者像缓冲区中单向写，写满后一次性写磁盘。性能低，不能同时读写数据。</li>
+<li>双缓冲区：一个用于写入数据，一个用于溢写磁盘，交替读写。仍会存在读写等待问题。</li>
+<li>环形缓冲区：缓冲区使用率达到一定阈值后便开始溢写磁盘，同时生产者仍可以像不断增加的剩余空间中循环写入数据，读写并行。<a id="more"></a></li>
+</ul>
+</li>
+<li><p>环形缓冲区实际是通过一个线性缓冲区模拟，通过取模操作实现循环取数据。缓冲区的读写采用的是典型的但生产者消费者模型。</p>
+</li>
+<li><p>Hadoop2.x让kvmeta、kvbuffer共用一个环形缓冲区，Hadoop0.22之前是采用了两级索引结构，涉及三个缓冲区，分别为kvoffsets、kvindices、kvbuffer。</p>
+</li>
+<li><p>实际实现中元数据信息是从末尾到头的顺序写入数组，元数据16byte，包括index、partition、keystart、valuestart。</p>
+</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><p><strong>Spill阶段</strong>：缓冲区内存占用到80%（默认）后溢写入本地磁盘；</p>
+<ul>
+<li><p>溢写入磁盘之前会对缓冲区中的数据先按照分区编号Partition再按key进行排序 ，使用的是Hadoop自己实现的快速排序，Hadoop中快速排序的优化体现在：</p>
+<p>（1）枢轴选择：中位数中元素作为枢轴；</p>
+<p>（2）子序列划分：左右两个扫描的索引遇到元素大于等于/小于等于枢轴元素时才会停止；</p>
+<p>（3）对相同元素的优化：将序列化分为三部分，中间部分为与枢轴相同的元素，不参与后续的递归；</p>
+<p>（4）减少递归次序：子序列中元素数目小于13时使用插入排序，不再继续递归。</p>
+</li>
+<li><p>按照分区编号由小到大依次将每个分区中的数据写入任务工作目录下的临时文件output/spillN.out（N表示当前溢写次数）中。如果用户设置了Combiner，则写入文件之前，对每个分区中的数据进行一次聚集操作。  </p>
+</li>
+<li><p>将分区数据的元信息写到内存索引数据结构SpillRecord中，其中每个分区的元信息包括在临时文件中的偏移量、压缩前数据大小和压缩后数据大小。如果当前内存索引大小超过1MB，则将内存索引写到文件output/spillN.out.index中。  </p>
+</li>
+<li><p>溢写同时仍然可以写入数据。</p>
+</li>
+</ul>
+</li>
+<li><p><strong>Combiner阶段</strong>：当所有数据处理完成后，MapTask对所有临时文件进行合并、排序，最后只会生成一个数据文件</p>
+<ul>
+<li>按分区合并文件，对于某个分区，采用多轮归并的方式排序合并；</li>
+<li>每轮合并100（默认）个文件，并将新文件加入待合并列表中，知道得到最后一个大文件。MapTask的输出结果保存为IFile的格式（支持按行压缩，可用Zlib、BZip2等压缩算法减小IO数据量）</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-3-ReduceTask"><a href="#3-3-ReduceTask" class="headerlink" title="3.3 ReduceTask"></a>3.3 ReduceTask</h4><p>ReduceTask从各个MapTask上读取数据，排序后以组为单位交给reduce()函数处理并将结果写入HDFS。<br><img src="https://img-blog.csdnimg.cn/20200410005703107.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
+<ul>
+<li><p><strong>Shuffle阶段</strong>：ReduceTask从各个MapTask上拷贝一片数据，针对每一片数据，如果其大小超过阈值，则写入磁盘，否则直接放在内存中。Map阶段完成至少进行5%以后开始拷贝。</p>
+</li>
+<li><p><strong>Merge阶段</strong>：拷贝远程数据的同时，ReduceTask启动两个后台线程对内存和磁盘上的文件合并。（归并排序）</p>
+<p>Shuffle和Merge过程可以分为三个子阶段：</p>
+<ul>
+<li>GetMapEventsThread线程周期性（心跳间隔）通过RPC从TaskTracker获取已完成的MapTask列表。</li>
+<li>ReduceTask同时启动多个MapOutputCopier线程（默认5个），通过HTTP Get远程拷贝数据，存入内存或磁盘中。</li>
+<li>ReduceTask启动LocalFSMerger和InMemFSMergeThread两个线程进行Merge。</li>
+<li>当内存中的数据已占有超过66%的堆内存、或内存中文件数超过1000个或阻塞在ShuffleRamManager上的请求数大于拷贝线程数的75%时，内存中的数据会溢写入磁盘。</li>
+</ul>
+</li>
+<li><p><strong>Sort阶段</strong>：Merge阶段已经减少了文件数目，这阶段只需对所有数据进行一次归并排序即可。</p>
+</li>
+<li><p><strong>Reduce阶段</strong>：按key将数据传入reduce()函数中聚合。</p>
+<ul>
+<li>Sort阶段与Reduce阶段也是并行的。在Sort阶段，ReduceTask为内存和磁盘中的文件建立了小顶堆，保存了指向根节点的迭代器。ReduceTask不断移动迭代器，以将相同key的数据顺次交给reduce()函数处理。移动迭代器的过程其实就是不断调整小顶堆的过程。</li>
+<li>这两个阶段必须在数据全部拷贝完后才能进行，是一个性能瓶颈。</li>
+</ul>
+</li>
+<li><p><strong>Write阶段</strong>：将计算结果写入HDFS。</p>
+</li>
+</ul>
+<h4 id="3-4-MapReduce的优化"><a href="#3-4-MapReduce的优化" class="headerlink" title="3.4 MapReduce的优化"></a>3.4 MapReduce的优化</h4><ul>
+<li><p>参数调优：</p>
+<ul>
+<li>可设置环形缓冲区大小、溢写阈值大小、是否压缩、压缩器选择、ReduceTask同时启动的拷贝线程数、Reduce阶段的内存阈值、合并阈值等。</li>
+<li>合理增加Combiner，减小IO</li>
+</ul>
+<p>杜克大学Starfish项目：自动参数调优</p>
+</li>
+<li><p>系统调优：</p>
+<ul>
+<li>避免排序；</li>
+<li>Shuffle阶段内部优化：Netty代替Jetty（Hadoop2.X）、Reduce端批拷贝、Shuffle阶段独立出来以分离IO与CPU的资源重叠使用；</li>
+<li>C++改写；</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-5-MapReduce的一些应用"><a href="#3-5-MapReduce的一些应用" class="headerlink" title="3.5 MapReduce的一些应用"></a>3.5 MapReduce的一些应用</h4><h5 id="3-5-1-TopN"><a href="#3-5-1-TopN" class="headerlink" title="3.5.1 TopN"></a>3.5.1 TopN</h5><p>数据保存入一个小顶堆（可用Reduce端放置一个TreeMap实现）</p>
+<h5 id="3-5-2-join"><a href="#3-5-2-join" class="headerlink" title="3.5.2 join"></a>3.5.2 join</h5><p>MapJoin：驱动中加入缓存，重新setup阶段保存小表，性能更优</p>
+<p>ReduceJoin：连接键作为key，性能较差</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag"># 分布式</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/apReduce%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E2%80%94%E2%80%94%E5%88%87%E7%89%87%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/" rel="next" title="MapReduce中的数据输入——切片与数据处理">
+                <i class="fa fa-chevron-left"></i> MapReduce中的数据输入——切片与数据处理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/Yarn%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BB%84%E6%88%90%E4%B8%8E%E5%9F%BA%E6%9C%AC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/" rel="prev" title="Yarn的设计组成与基本工作流程">
+                Yarn的设计组成与基本工作流程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">26</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">30</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-MapReduceTask工作流程"><span class="nav-number">1.</span> <span class="nav-text">3. MapReduceTask工作流程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-概述"><span class="nav-number">1.1.</span> <span class="nav-text">3.1 概述</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-2-MapTask"><span class="nav-number">1.2.</span> <span class="nav-text">3.2 MapTask</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-3-ReduceTask"><span class="nav-number">1.3.</span> <span class="nav-text">3.3 ReduceTask</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-4-MapReduce的优化"><span class="nav-number">1.4.</span> <span class="nav-text">3.4 MapReduce的优化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-5-MapReduce的一些应用"><span class="nav-number">1.5.</span> <span class="nav-text">3.5 MapReduce的一些应用</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-5-1-TopN"><span class="nav-number">1.5.1.</span> <span class="nav-text">3.5.1 TopN</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-5-2-join"><span class="nav-number">1.5.2.</span> <span class="nav-text">3.5.2 join</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Hadoop,分布式,HDFS," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="一、Hadoop Distributed FileSystem（HDFS）1. HDFS的设计HDFS时为以流式数据访问模式存储超大文件而设计的文件系统，在商用硬件集群上运行。 1.1 文件块（Block）HDFS以块为单位保存文件，在Hadoop2.x版本中块的大小默认为128M（在hadoop1.x中64M，通过dfs.blocksize规定）。一个小于块大小的文件不会占据整个块空间。 1.1">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hadoop文件系统——HDFS的组织架构设计">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E7%9A%84%E7%BB%84%E7%BB%87%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="一、Hadoop Distributed FileSystem（HDFS）1. HDFS的设计HDFS时为以流式数据访问模式存储超大文件而设计的文件系统，在商用硬件集群上运行。 1.1 文件块（Block）HDFS以块为单位保存文件，在Hadoop2.x版本中块的大小默认为128M（在hadoop1.x中64M，通过dfs.blocksize规定）。一个小于块大小的文件不会占据整个块空间。 1.1">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-21T15:48:27.000Z">
+<meta property="article:modified_time" content="2020-04-21T16:04:58.446Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="分布式">
+<meta property="article:tag" content="HDFS">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/adoop文件系统——HDFS的组织架构设计/"/>
+
+
+
+
+
+  <title>Hadoop文件系统——HDFS的组织架构设计 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E7%9A%84%E7%BB%84%E7%BB%87%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Hadoop文件系统——HDFS的组织架构设计</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:48:27+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="一、Hadoop-Distributed-FileSystem（HDFS）"><a href="#一、Hadoop-Distributed-FileSystem（HDFS）" class="headerlink" title="一、Hadoop Distributed FileSystem（HDFS）"></a>一、Hadoop Distributed FileSystem（HDFS）</h2><h3 id="1-HDFS的设计"><a href="#1-HDFS的设计" class="headerlink" title="1. HDFS的设计"></a>1. HDFS的设计</h3><p>HDFS时为以<strong>流式数据访问模式</strong>存储<strong>超大文件</strong>而设计的文件系统，在商用硬件集群上运行。</p>
+<h4 id="1-1-文件块（Block）"><a href="#1-1-文件块（Block）" class="headerlink" title="1.1 文件块（Block）"></a>1.1 文件块（Block）</h4><p>HDFS以块为单位保存文件，在Hadoop2.x版本中块的大小默认为128M（在hadoop1.x中64M，通过dfs.blocksize规定）。一个小于块大小的文件不会占据整个块空间。</p>
+<h5 id="1-1-1-如何确定HDFS中块的大小？"><a href="#1-1-1-如何确定HDFS中块的大小？" class="headerlink" title="1.1.1 如何确定HDFS中块的大小？"></a>1.1.1 如何确定HDFS中块的大小？</h5><p><strong>HDFS中块比磁盘大，目的是减少寻址开销</strong>，从而传输一个由多个块组成的文件的时间就取决于磁盘的传输速率。<br><strong>如果块设计的太大，传输数据时间会增大；如果块设计的太小，会增加寻址时间。</strong></p>
+<p><strong>块大小的设计原则：寻址时间为传输时间的1%</strong></p>
+<p>目前磁盘的传输速率普遍为100MB/s，若希望寻址时间在10ms以内，那么传输时间为1s，Block大小为100MB，取2的整数次幂得到128MB。</p>
+<h5 id="1-1-2-采用块的好处"><a href="#1-1-2-采用块的好处" class="headerlink" title="1.1.2 采用块的好处"></a>1.1.2 采用块的好处</h5><ul>
+<li>减少了寻址时间，提高处理大文件的效率</li>
+<li>一个文件可以大于网络中任意一个磁盘的容量，不需要存储在同一块磁盘上</li>
+<li>简化存储管理（块的大小固定），元数据可以不与块一同储存。</li>
+<li>便于提高系统的容错和实用性，方便复制</li>
+</ul>
+<h4 id="1-2-NameNode，Secondary-NameNode-amp-DataNode"><a href="#1-2-NameNode，Secondary-NameNode-amp-DataNode" class="headerlink" title="1.2 NameNode，Secondary NameNode &amp; DataNode"></a>1.2 NameNode，Secondary NameNode &amp; DataNode</h4><p>HDFS集群有两种节点，以Master-Slave模式运行。</p>
+<h5 id="NameNode-amp-Secondary-NameNode"><a href="#NameNode-amp-Secondary-NameNode" class="headerlink" title="NameNode&amp;Secondary NameNode"></a>NameNode&amp;Secondary NameNode</h5><p><strong>NameNode作用：管理整个文件系统的命名空间；配置副本策略；管理Block的映射信息；处理客户端读写请求</strong><br><strong>SeconaryNameNode作用：复制NameNode，定期合并Fsimage，Edits；辅助恢复NameNode</strong></p>
+<blockquote>
+<p>NameNode中并不保留Block的位置信息，而是DataNode启动后定期汇报。</p>
+</blockquote>
+<p><strong>工作机制</strong>：</p>
+<ul>
+<li>第一阶段：NameNode启动<ul>
+<li>第一次启动NameNode格式化后，创建Fsimage和Edits文件。如果不是第一次启动，直接<strong>加载编辑日志和镜像文件到内存</strong>。</li>
+<li>客户端对元数据进行增删改的请求：<strong>NameNode先记录操作日志，更新滚动日志再内存中对数据进行增删改。</strong></li>
+</ul>
+</li>
+<li>第二阶段：Secondary NameNode工作<ul>
+<li>Secondary NameNode询问NameNode是否需要CheckPoint，返回NameNode是否检查结果。（         <strong>触发CheckPoint需要满足两个条件中的任意一个：1小时时间到和每隔一分种检查Edits中操作次数是否达到100万</strong>）  </li>
+<li>若需要CheckPoint则请求执行：<ul>
+<li>NameNode<strong>滚动正在写的Edits日志，生成一个空的edits.inprogress</strong>，将滚动前的编辑日志和镜像文件拷贝到Secondary NameNode；</li>
+<li>Secondary NameNode<strong>加载编辑日志和镜像文件到内存，并合并，生成新的镜像文件</strong>fsimage.chkpoint。</li>
+<li>拷贝fsimage.chkpoint到NameNode，NameNode将fsimage.chkpoint重新命名成fsimage。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Secondary NameNode恢复NameNode的方法：</p>
+<ul>
+<li>直接拷贝</li>
+<li>使用<code>hdfs namenode -importCheckpoint</code>启动NameNode守护进程，从而将SecondaryNameNode中数据拷贝到NameNode目录中  </li>
+</ul>
+<p><strong>集群安全模式：</strong></p>
+<ul>
+<li>NameNode启动时，首先将镜像文件（Fsimage）载入内存，并执行编辑日志（Edits）中的各项操作。一旦在内存中成功建立文件系统元数据的映像，则创建一个新的Fsimage文件和一个空的编辑日志。此时，NameNode开始监听DataNode请求。<strong>这个过程期间，NameNode一直运行在安全模式，即NameNode的文件系统对于客户端来说是只读的。</strong></li>
+<li>系统中的<strong>数据块的位置并不是由NameNode维护的，而是以块列表的形式存储在DataNode中</strong>。在系统的正常操作期间，NameNode会在内存中保留所有块位置的映射信息。在安全模式下，各个DataNode会向NameNode发送最新的块列表信息，NameNode了解到足够多的块位置信息之后，即可高效运行文件系统。</li>
+<li>如果<strong>满足“最小副本条件”</strong>，<strong>NameNode会在30秒钟之后就退出安全模式</strong>。所谓的最小副本条件指的是在整个文件系统中99.9%的块满足最小副本级别（默认值：dfs.replication.min=1）。在<strong>启动一个刚刚格式化的HDFS集群时，因为系统中还没有任何块，所以NameNode不会进入安全模式</strong>。</li>
+</ul>
+<h5 id="DataNode："><a href="#DataNode：" class="headerlink" title="DataNode："></a>DataNode：</h5><p><strong>作用：储存实际数据块；执行读写操作</strong></p>
+<ul>
+<li>一个数据块在DataNode上以文件形式存储在磁盘上，包括两个文件，<strong>一个是数据本身，一个是元数据包括数据块的长度，块数据的校验和，以及时间戳。</strong>DataNode会<strong>周期性检验文件的校验和是否与创建时相同以保证文件的正确性；</strong></li>
+<li><strong>DataNode启动后向NameNode注册</strong>，通过后，<strong>周期性（1小时）的向NameNode上报所有的块信息</strong>。</li>
+<li><strong>心跳是每3秒一次</strong>，<strong>心跳返回结果带有NameNode给该DataNode的命令</strong>如复制块数据到另一台机器，或删除某个数据块。<strong>如果超过10分钟（默认超时时长10分钟+30秒）没有收到某个DataNode的心跳，则认为该节点不可用</strong>。</li>
+<li>集群运行中可以安全加入和退出一些机器。</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/HDFS/" rel="tag"># HDFS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/%E7%BB%86%E8%A7%A3%E6%9E%90%EF%BC%9Amysql%E5%AE%9E%E7%8E%B0%E5%88%86%E7%BB%84%E6%9F%A5%E8%AF%A2%E6%AF%8F%E4%B8%AA%E7%8F%AD%E7%BA%A7%E7%9A%84%E5%89%8D%E4%B8%89%E5%90%8D/" rel="next" title="详细解析：mysql实现分组查询每个班级的前三名">
+                <i class="fa fa-chevron-left"></i> 详细解析：mysql实现分组查询每个班级的前三名
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E8%AF%BB%E5%86%99%E6%95%B0%E6%8D%AE%E6%B5%81/" rel="prev" title="Hadoop文件系统——HDFS读写数据流">
+                Hadoop文件系统——HDFS读写数据流 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">26</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">30</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、Hadoop-Distributed-FileSystem（HDFS）"><span class="nav-number">1.</span> <span class="nav-text">一、Hadoop Distributed FileSystem（HDFS）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-HDFS的设计"><span class="nav-number">1.1.</span> <span class="nav-text">1. HDFS的设计</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1-文件块（Block）"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1 文件块（Block）</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1-1-如何确定HDFS中块的大小？"><span class="nav-number">1.1.1.1.</span> <span class="nav-text">1.1.1 如何确定HDFS中块的大小？</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1-2-采用块的好处"><span class="nav-number">1.1.1.2.</span> <span class="nav-text">1.1.2 采用块的好处</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-2-NameNode，Secondary-NameNode-amp-DataNode"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.2 NameNode，Secondary NameNode &amp; DataNode</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#NameNode-amp-Secondary-NameNode"><span class="nav-number">1.1.2.1.</span> <span class="nav-text">NameNode&amp;Secondary NameNode</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#DataNode："><span class="nav-number">1.1.2.2.</span> <span class="nav-text">DataNode：</span></a></li></ol></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

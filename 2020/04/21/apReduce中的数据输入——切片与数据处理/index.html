@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="MapReduce,分布式,HDFS," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="2. MapReduce中的数据输入2.1 文件切片2.1.1 什么是切片数据块（Block）：HDFS中数据保存的单位，HDFS在物理上将数据分为一个一个Block管理 数据切片（Split）：在逻辑上对Map任务输入数据的切片。 2.1.2 为什么要切片将输入文件分为多片可以并行进行Map阶段的计算，提高Job的运行速度。一份数据切片就会有一个MapTask。 2.1.3 文件的切片机制 简单">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MapReduce中的数据输入——切片与数据处理">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/apReduce%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E2%80%94%E2%80%94%E5%88%87%E7%89%87%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="2. MapReduce中的数据输入2.1 文件切片2.1.1 什么是切片数据块（Block）：HDFS中数据保存的单位，HDFS在物理上将数据分为一个一个Block管理 数据切片（Split）：在逻辑上对Map任务输入数据的切片。 2.1.2 为什么要切片将输入文件分为多片可以并行进行Map阶段的计算，提高Job的运行速度。一份数据切片就会有一个MapTask。 2.1.3 文件的切片机制 简单">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="e:%5CJAVA-SUMMARY%5CHadoop%5Cpicture%5Csubmit.png">
+<meta property="article:published_time" content="2020-04-21T15:50:27.000Z">
+<meta property="article:modified_time" content="2020-04-21T16:06:17.681Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="MapReduce">
+<meta property="article:tag" content="分布式">
+<meta property="article:tag" content="HDFS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="e:%5CJAVA-SUMMARY%5CHadoop%5Cpicture%5Csubmit.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/apReduce中的数据输入——切片与数据处理/"/>
+
+
+
+
+
+  <title>MapReduce中的数据输入——切片与数据处理 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/apReduce%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E2%80%94%E2%80%94%E5%88%87%E7%89%87%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MapReduce中的数据输入——切片与数据处理</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:50:27+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="2-MapReduce中的数据输入"><a href="#2-MapReduce中的数据输入" class="headerlink" title="2. MapReduce中的数据输入"></a>2. MapReduce中的数据输入</h3><h4 id="2-1-文件切片"><a href="#2-1-文件切片" class="headerlink" title="2.1 文件切片"></a>2.1 文件切片</h4><h5 id="2-1-1-什么是切片"><a href="#2-1-1-什么是切片" class="headerlink" title="2.1.1 什么是切片"></a>2.1.1 什么是切片</h5><p>数据块（Block）：HDFS中数据保存的单位，HDFS在物理上将数据分为一个一个Block管理</p>
+<p>数据切片（Split）：在逻辑上对Map任务输入数据的切片。</p>
+<h5 id="2-1-2-为什么要切片"><a href="#2-1-2-为什么要切片" class="headerlink" title="2.1.2 为什么要切片"></a>2.1.2 为什么要切片</h5><p>将输入文件分为多片可以并行进行Map阶段的计算，提高Job的运行速度。一份数据切片就会有一个MapTask。</p>
+<h5 id="2-1-3-文件的切片机制"><a href="#2-1-3-文件的切片机制" class="headerlink" title="2.1.3 文件的切片机制"></a>2.1.3 文件的切片机制</h5><ul>
+<li>简单的按照文件的内容长度切片，切片大小默认为Block的大小（128M）,但每次切片完都会判断剩下的部分是否大于块的1.1倍，不大于1.1倍就归入上一个切片</li>
+<li>切片时不会考虑数据集整体，而是单独针对每一份文件切片（默认）</li>
+</ul>
+<h4 id="2-2-任务提交流程"><a href="#2-2-任务提交流程" class="headerlink" title="2.2 任务提交流程"></a>2.2 任务提交流程</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//在客户端Driver中提交任务</span></span><br><span class="line">job.waitForCompletion()</span><br><span class="line">submit();</span><br><span class="line"><span class="comment">// 1建立连接</span></span><br><span class="line">	connect();	</span><br><span class="line">		<span class="comment">// 1）创建提交Job的代理</span></span><br><span class="line">		<span class="keyword">new</span> Cluster(getConfiguration());</span><br><span class="line">			<span class="comment">// （1）判断是本地yarn还是远程</span></span><br><span class="line">			initialize(jobTrackAddr, conf); </span><br><span class="line"><span class="comment">// 2 提交job</span></span><br><span class="line">submitter.submitJobInternal(Job.<span class="keyword">this</span>, cluster)</span><br><span class="line">	<span class="comment">// 1）创建给集群提交数据的Stag路径</span></span><br><span class="line">	Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, conf);</span><br><span class="line">	<span class="comment">// 2）获取jobid ，并创建Job路径</span></span><br><span class="line">	JobID jobId = submitClient.getNewJobID();</span><br><span class="line">	<span class="comment">// 3）拷贝jar包到集群</span></span><br><span class="line">copyAndConfigureFiles(job, submitJobDir);	</span><br><span class="line">	rUploader.uploadFiles(job, jobSubmitDir);</span><br><span class="line"><span class="comment">// 4）计算切片，生成切片规划文件</span></span><br><span class="line">writeSplits(job, submitJobDir);</span><br><span class="line">		maps = writeNewSplits(job, jobSubmitDir);</span><br><span class="line">		input.getSplits(job);</span><br><span class="line">			<span class="keyword">long</span> minSize = Math.max(getFormatMinSplitSize(), getMinSplitSize(job));</span><br><span class="line">    		<span class="keyword">long</span> maxSize = getMaxSplitSize(job);</span><br><span class="line">			<span class="keyword">for</span> (FileStatus file: files) </span><br><span class="line">                <span class="keyword">long</span> splitSize = computeSplitSize(blockSize, minSize, maxSize);</span><br><span class="line">					<span class="comment">//blockSize与给定的最大值的最小值与给定的Split最小值取最大值</span></span><br><span class="line">					<span class="comment">//最小值默认为1，最大值默认为Long.MAX_VALUE</span></span><br><span class="line">					Math.max(minSize, Math.min(maxSize, blockSize));</span><br><span class="line"><span class="comment">// 5）向Stag路径写XML配置文件</span></span><br><span class="line">writeConf(conf, submitJobFile);</span><br><span class="line">	conf.writeXml(out);</span><br><span class="line"><span class="comment">// 6）提交Job,返回提交状态</span></span><br><span class="line">status = submitClient.submitJob(jobId, submitJobDir.toString(), job.getCredentials());</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<p><img src="E:%5CJAVA-SUMMARY%5CHadoop%5Cpicture%5Csubmit.png" alt=""></p>
+<ol>
+<li>Job.submit运行，获得一个JobSubmitter对象；</li>
+<li>找到数据存储的目录，获取JobId等信息；</li>
+<li>遍历所有文件，按要求规划切片信息，并将切片信息写入job.split文件中（只包含了元数据信息）</li>
+<li>获取相关参数的.xml文件和任务jar包；</li>
+<li>提交到YARN，根据切片信息分配MapTask。</li>
+</ol>
+<p><strong>如何决定Map和Reduce的数量</strong></p>
+<p>1） map的数量：splitSize=max(minSize,min{maxSize,blockSize}) map个数由切片数决定</p>
+<p>2） reduce的数量：job.setNumReduceTasks(x);默认为1</p>
+<h4 id="2-3-几种不同的切片方法"><a href="#2-3-几种不同的切片方法" class="headerlink" title="2.3 几种不同的切片方法"></a>2.3 几种不同的切片方法</h4><h5 id="TextInputFormat-默认"><a href="#TextInputFormat-默认" class="headerlink" title="TextInputFormat(默认)"></a>TextInputFormat(默认)</h5><p>不管文件多小，都会单独规划切片，如果有大量小文件，就会产生大量的MapTask，处理效率极其低下。</p>
+<h5 id="CombineTextInputFormat"><a href="#CombineTextInputFormat" class="headerlink" title="CombineTextInputFormat"></a>CombineTextInputFormat</h5><p>会将多个小文件从逻辑上规划到一个切片中。</p>
+<p><code>CombineTextInputFormat.setMaxInputSplitSize(job, 4194304);// 4m</code></p>
+<h4 id="2-4-MapTask读取数据的方法（FileInputFormat）"><a href="#2-4-MapTask读取数据的方法（FileInputFormat）" class="headerlink" title="2.4 MapTask读取数据的方法（FileInputFormat）"></a>2.4 MapTask读取数据的方法（FileInputFormat）</h4><p>MapTask将文件读取如内存并按K-V对的形式保存，具体实现依靠FileInputFormat的实现类</p>
+<h5 id="2-4-1-TextInputFormat（默认）"><a href="#2-4-1-TextInputFormat（默认）" class="headerlink" title="2.4.1 TextInputFormat（默认）"></a>2.4.1 TextInputFormat（默认）</h5><p>按行读取：</p>
+<p>键是该行起始位置在整个文件中字节偏移量，LongWritable类型；<br>值是这行内容，不包括换行符和回车符，Text类型。</p>
+<h5 id="2-4-2-KeyValueTextInputFormat"><a href="#2-4-2-KeyValueTextInputFormat" class="headerlink" title="2.4.2 KeyValueTextInputFormat"></a>2.4.2 KeyValueTextInputFormat</h5><p>按行读取：</p>
+<p>被分隔符分割为K-V对，默认分隔符为’\t’。</p>
+<h5 id="2-4-3-NlineInputFormat"><a href="#2-4-3-NlineInputFormat" class="headerlink" title="2.4.3 NlineInputFormat"></a>2.4.3 NlineInputFormat</h5><p>文件分片方式不同：每个MapTask不再按Block划分，而是按NlineInputFormat指定的行数N来划分。<br>键值对读取与默认相同</p>
+<h5 id="2-4-4-自定义InputFormat实现类"><a href="#2-4-4-自定义InputFormat实现类" class="headerlink" title="2.4.4 自定义InputFormat实现类"></a>2.4.4 自定义InputFormat实现类</h5><p>案例：可以通过这种方法读取小文件合并为一个SequenceFile文件实现大量小文件的合并。</p>
+<p>流程：</p>
+<ul>
+<li>自定义类继承FileInputFormat；<ul>
+<li>重写isSplitable()返回false不可分割；</li>
+<li>重写CreateRecordReader，创建自定义的Reader对象；</li>
+</ul>
+</li>
+<li>改写RecordReader，实现一次读取一个文件，封装为KV对；<ul>
+<li>IO流一次读入一个文件，保存为value；</li>
+<li>文件路径信息+文件名，保存为key；</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 定义类继承FileInputFormat</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WholeFileInputformat</span> <span class="keyword">extends</span> <span class="title">FileInputFormat</span>&lt;<span class="title">Text</span>, <span class="title">BytesWritable</span>&gt;</span>&#123;	</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">isSplitable</span><span class="params">(JobContext context, Path filename)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> RecordReader&lt;Text, BytesWritable&gt; <span class="title">createRecordReader</span><span class="params">(InputSplit split, TaskAttemptContext context)</span>	<span class="keyword">throws</span> IOException, InterruptedException </span>&#123;		</span><br><span class="line">		WholeRecordReader recordReader = <span class="keyword">new</span> WholeRecordReader();</span><br><span class="line">		recordReader.initialize(split, context);		</span><br><span class="line">		<span class="keyword">return</span> recordReader;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WholeRecordReader</span> <span class="keyword">extends</span> <span class="title">RecordReader</span>&lt;<span class="title">Text</span>, <span class="title">BytesWritable</span>&gt;</span>&#123;</span><br><span class="line">	<span class="keyword">private</span> Configuration configuration;</span><br><span class="line">	<span class="keyword">private</span> FileSplit split;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">boolean</span> isProgress= <span class="keyword">true</span>;</span><br><span class="line">	<span class="keyword">private</span> BytesWritable value = <span class="keyword">new</span> BytesWritable();</span><br><span class="line">	<span class="keyword">private</span> Text k = <span class="keyword">new</span> Text();</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">initialize</span><span class="params">(InputSplit split, TaskAttemptContext context)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;		</span><br><span class="line">		<span class="keyword">this</span>.split = (FileSplit)split;</span><br><span class="line">		configuration = context.getConfiguration();</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">nextKeyValue</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;		</span><br><span class="line">		<span class="keyword">if</span> (isProgress) &#123;</span><br><span class="line">			<span class="comment">// 1 定义缓存区</span></span><br><span class="line">			<span class="keyword">byte</span>[] contents = <span class="keyword">new</span> <span class="keyword">byte</span>[(<span class="keyword">int</span>)split.getLength()];			</span><br><span class="line">			FileSystem fs = <span class="keyword">null</span>;</span><br><span class="line">			FSDataInputStream fis = <span class="keyword">null</span>;			</span><br><span class="line">			<span class="keyword">try</span> &#123;</span><br><span class="line">				<span class="comment">// 2 获取文件系统</span></span><br><span class="line">				Path path = split.getPath();</span><br><span class="line">				fs = path.getFileSystem(configuration);				</span><br><span class="line">				<span class="comment">// 3 读取数据</span></span><br><span class="line">				fis = fs.open(path);				</span><br><span class="line">				<span class="comment">// 4 读取文件内容</span></span><br><span class="line">				IOUtils.readFully(fis, contents, <span class="number">0</span>, contents.length);				</span><br><span class="line">				<span class="comment">// 5 输出文件内容</span></span><br><span class="line">				value.set(contents, <span class="number">0</span>, contents.length);</span><br><span class="line">				<span class="comment">// 6 获取文件路径及名称</span></span><br><span class="line">				String name = split.getPath().toString();</span><br><span class="line">				<span class="comment">// 7 设置输出的key值</span></span><br><span class="line">				k.set(name);</span><br><span class="line">			&#125; <span class="keyword">catch</span> (Exception e) &#123;				</span><br><span class="line">			&#125;<span class="keyword">finally</span> &#123;</span><br><span class="line">				IOUtils.closeStream(fis);</span><br><span class="line">			&#125;			</span><br><span class="line">			isProgress = <span class="keyword">false</span>;			</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">		&#125;		</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Text <span class="title">getCurrentKey</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> k;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> BytesWritable <span class="title">getCurrentValue</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> value;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">float</span> <span class="title">getProgress</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SequenceFileMapper</span> <span class="keyword">extends</span> <span class="title">Mapper</span>&lt;<span class="title">Text</span>, <span class="title">BytesWritable</span>, <span class="title">Text</span>, <span class="title">BytesWritable</span>&gt;</span>&#123;	</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">map</span><span class="params">(Text key, BytesWritable value,Context context)</span><span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		context.write(key, value);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SequenceFileReducer</span> <span class="keyword">extends</span> <span class="title">Reducer</span>&lt;<span class="title">Text</span>, <span class="title">BytesWritable</span>, <span class="title">Text</span>, <span class="title">BytesWritable</span>&gt; </span>&#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">reduce</span><span class="params">(Text key, Iterable&lt;BytesWritable&gt; values, Context context)</span>		<span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		context.write(key, values.iterator().next());</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SequenceFileDriver</span> </span>&#123;</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException, ClassNotFoundException, InterruptedException </span>&#123;		</span><br><span class="line">       <span class="comment">// 输入输出路径需要根据自己电脑上实际的输入输出路径设置</span></span><br><span class="line">		args = <span class="keyword">new</span> String[] &#123; <span class="string">"e:/input/inputinputformat"</span>, <span class="string">"e:/output1"</span> &#125;;</span><br><span class="line">       <span class="comment">// 1 获取job对象</span></span><br><span class="line">		Configuration conf = <span class="keyword">new</span> Configuration();</span><br><span class="line">		Job job = Job.getInstance(conf);</span><br><span class="line">       <span class="comment">// 2 设置jar包存储位置、关联自定义的mapper和reducer</span></span><br><span class="line">		job.setJarByClass(SequenceFileDriver<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">		job.setMapperClass(SequenceFileMapper<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">		job.setReducerClass(SequenceFileReducer<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">       <span class="comment">// 7设置输入的inputFormat</span></span><br><span class="line">		job.setInputFormatClass(WholeFileInputformat<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">       <span class="comment">// 8设置输出的outputFormat</span></span><br><span class="line">	 	job.setOutputFormatClass(SequenceFileOutputFormat<span class="class">.<span class="keyword">class</span>)</span>;       </span><br><span class="line">		<span class="comment">// 3 设置map输出端的kv类型</span></span><br><span class="line">		job.setMapOutputKeyClass(Text<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">		job.setMapOutputValueClass(BytesWritable<span class="class">.<span class="keyword">class</span>)</span>;		</span><br><span class="line">       <span class="comment">// 4 设置最终输出端的kv类型</span></span><br><span class="line">		job.setOutputKeyClass(Text<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">		job.setOutputValueClass(BytesWritable<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">       <span class="comment">// 5 设置输入输出路径</span></span><br><span class="line">		FileInputFormat.setInputPaths(job, <span class="keyword">new</span> Path(args[<span class="number">0</span>]));</span><br><span class="line">		FileOutputFormat.setOutputPath(job, <span class="keyword">new</span> Path(args[<span class="number">1</span>]));</span><br><span class="line">       <span class="comment">// 6 提交job</span></span><br><span class="line">		<span class="keyword">boolean</span> result = job.waitForCompletion(<span class="keyword">true</span>);</span><br><span class="line">		System.exit(result ? <span class="number">0</span> : <span class="number">1</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/MapReduce/" rel="tag"># MapReduce</a>
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/" rel="tag"># 分布式</a>
+          
+            <a href="/tags/HDFS/" rel="tag"># HDFS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E8%AF%BB%E5%86%99%E6%95%B0%E6%8D%AE%E6%B5%81/" rel="next" title="Hadoop文件系统——HDFS读写数据流">
+                <i class="fa fa-chevron-left"></i> Hadoop文件系统——HDFS读写数据流
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/apReduce%E7%9A%84%E8%AF%A6%E7%BB%86%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/" rel="prev" title="MapReduce的详细工作流程">
+                MapReduce的详细工作流程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">26</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">30</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-MapReduce中的数据输入"><span class="nav-number">1.</span> <span class="nav-text">2. MapReduce中的数据输入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1-文件切片"><span class="nav-number">1.1.</span> <span class="nav-text">2.1 文件切片</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-1-1-什么是切片"><span class="nav-number">1.1.1.</span> <span class="nav-text">2.1.1 什么是切片</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-1-2-为什么要切片"><span class="nav-number">1.1.2.</span> <span class="nav-text">2.1.2 为什么要切片</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-1-3-文件的切片机制"><span class="nav-number">1.1.3.</span> <span class="nav-text">2.1.3 文件的切片机制</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-2-任务提交流程"><span class="nav-number">1.2.</span> <span class="nav-text">2.2 任务提交流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-3-几种不同的切片方法"><span class="nav-number">1.3.</span> <span class="nav-text">2.3 几种不同的切片方法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#TextInputFormat-默认"><span class="nav-number">1.3.1.</span> <span class="nav-text">TextInputFormat(默认)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#CombineTextInputFormat"><span class="nav-number">1.3.2.</span> <span class="nav-text">CombineTextInputFormat</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-4-MapTask读取数据的方法（FileInputFormat）"><span class="nav-number">1.4.</span> <span class="nav-text">2.4 MapTask读取数据的方法（FileInputFormat）</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-4-1-TextInputFormat（默认）"><span class="nav-number">1.4.1.</span> <span class="nav-text">2.4.1 TextInputFormat（默认）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-4-2-KeyValueTextInputFormat"><span class="nav-number">1.4.2.</span> <span class="nav-text">2.4.2 KeyValueTextInputFormat</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-4-3-NlineInputFormat"><span class="nav-number">1.4.3.</span> <span class="nav-text">2.4.3 NlineInputFormat</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-4-4-自定义InputFormat实现类"><span class="nav-number">1.4.4.</span> <span class="nav-text">2.4.4 自定义InputFormat实现类</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
