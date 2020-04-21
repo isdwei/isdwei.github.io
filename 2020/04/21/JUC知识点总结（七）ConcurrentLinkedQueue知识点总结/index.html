@@ -87,7 +87,7 @@
 <meta property="og:description" content="13. ConcurrentLinkedQueue （循环CAS）应用场景：按照适用的并发强度从低到高排列如下：  LinkedList&#x2F;ArrayList  非线程安全，不能用于并发场景（List的方法支持栈和队列的操作，因此可以用List封装成stack和queue）； Collections.synchronizedList  使用wrapper class封装，每个方法都用synchron">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-04-21T08:56:05.000Z">
-<meta property="article:modified_time" content="2020-04-21T06:27:44.220Z">
+<meta property="article:modified_time" content="2020-04-21T14:51:20.239Z">
 <meta property="article:author" content="D. Wei">
 <meta property="article:tag" content="多线程">
 <meta name="twitter:card" content="summary">
@@ -363,9 +363,10 @@
 <ul>
 <li>在并发的场景下，如果并发强度较小，性能要求不苛刻，且锁可控的场景下，可使用Collections.synchronizedList，既保证了数据一致又保证了线程安全，性能够用；</li>
 <li>在大部分高并发场景下，建议使用 LinkedBlockingQueue ，性能与 ConcurrentLinkedQueue 接近，且能保证数据一致性；</li>
-<li>ConcurrentLinkedQueue 适用于超高并发的场景，但是需要针对数据不一致采取一些措施。</li>
+<li>ConcurrentLinkedQueue 适用于超高并发的场景，但是需要针对数据不一致采取一些措施。<a id="more"></a>
+<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a><strong>源码分析</strong></h4></li>
 </ul>
-<h4 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a><strong>源码分析</strong></h4><h5 id="offer-E-e"><a href="#offer-E-e" class="headerlink" title="offer(E e)"></a>offer(E e)</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">offer</span><span class="params">(E e)</span> </span>&#123;</span><br><span class="line">    checkNotNull(e);</span><br><span class="line">    <span class="comment">//创建入队节点</span></span><br><span class="line">    <span class="keyword">final</span> Node&lt;E&gt; newNode = <span class="keyword">new</span> Node&lt;E&gt;(e);</span><br><span class="line">    <span class="comment">//t为tail节点，p为尾节点，默认相等，采用失败即重试的方式，直到入队成功</span></span><br><span class="line">    <span class="keyword">for</span> (Node&lt;E&gt; t = tail, p = t; ; ) &#123;</span><br><span class="line">        <span class="comment">//获得p的下一个节点</span></span><br><span class="line">        Node&lt;E&gt; q = p.next;</span><br><span class="line">        <span class="comment">// 如果下一个节点是null,也就是p节点就是尾节点</span></span><br><span class="line">        <span class="keyword">if</span> (q == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//将入队节点newNode设置为当前队列尾节点p的next节点</span></span><br><span class="line">            <span class="keyword">if</span> (p.casNext(<span class="keyword">null</span>, newNode)) &#123;</span><br><span class="line">                <span class="comment">//判断tail节点是不是尾节点，也可以理解为如果插入结点后tail节点和p节点距离达到两个结点</span></span><br><span class="line">                <span class="keyword">if</span> (p != t)</span><br><span class="line">                    <span class="comment">//如果tail不是尾节点则将入队节点设置为tail。</span></span><br><span class="line">                    <span class="comment">// 如果失败了，那么说明有其他线程已经把tail移动过 </span></span><br><span class="line">                    casTail(t, newNode);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 如果p节点等于p的next节点，则说明p节点和q节点都为空，表示队列刚初始化，所以返回                            head节点</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (p == q)</span><br><span class="line">            p = (t != (t = tail)) ? t : head;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="comment">//p有next节点，表示p的next节点是尾节点，则需要重新更新p后将它指向next节点</span></span><br><span class="line">            p = (p != t &amp;&amp; t != (t = tail)) ? t : q;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="offer-E-e"><a href="#offer-E-e" class="headerlink" title="offer(E e)"></a>offer(E e)</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">offer</span><span class="params">(E e)</span> </span>&#123;</span><br><span class="line">    checkNotNull(e);</span><br><span class="line">    <span class="comment">//创建入队节点</span></span><br><span class="line">    <span class="keyword">final</span> Node&lt;E&gt; newNode = <span class="keyword">new</span> Node&lt;E&gt;(e);</span><br><span class="line">    <span class="comment">//t为tail节点，p为尾节点，默认相等，采用失败即重试的方式，直到入队成功</span></span><br><span class="line">    <span class="keyword">for</span> (Node&lt;E&gt; t = tail, p = t; ; ) &#123;</span><br><span class="line">        <span class="comment">//获得p的下一个节点</span></span><br><span class="line">        Node&lt;E&gt; q = p.next;</span><br><span class="line">        <span class="comment">// 如果下一个节点是null,也就是p节点就是尾节点</span></span><br><span class="line">        <span class="keyword">if</span> (q == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">//将入队节点newNode设置为当前队列尾节点p的next节点</span></span><br><span class="line">            <span class="keyword">if</span> (p.casNext(<span class="keyword">null</span>, newNode)) &#123;</span><br><span class="line">                <span class="comment">//判断tail节点是不是尾节点，也可以理解为如果插入结点后tail节点和p节点距离达到两个结点</span></span><br><span class="line">                <span class="keyword">if</span> (p != t)</span><br><span class="line">                    <span class="comment">//如果tail不是尾节点则将入队节点设置为tail。</span></span><br><span class="line">                    <span class="comment">// 如果失败了，那么说明有其他线程已经把tail移动过 </span></span><br><span class="line">                    casTail(t, newNode);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 如果p节点等于p的next节点，则说明p节点和q节点都为空，表示队列刚初始化，所以返回                            head节点</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (p == q)</span><br><span class="line">            p = (t != (t = tail)) ? t : head;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            <span class="comment">//p有next节点，表示p的next节点是尾节点，则需要重新更新p后将它指向next节点</span></span><br><span class="line">            p = (p != t &amp;&amp; t != (t = tail)) ? t : q;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>即定位出尾节点=&gt;CAS入队=&gt;重新定位tail节点。</p>
 <h5 id="poll"><a href="#poll" class="headerlink" title="poll( )"></a>poll( )</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> E <span class="title">poll</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 设置起始点  </span></span><br><span class="line">    restartFromHead:</span><br><span class="line">    <span class="keyword">for</span> (; ; ) &#123;</span><br><span class="line">        <span class="comment">//p表示head结点，需要出队的节点</span></span><br><span class="line">        <span class="keyword">for</span> (Node&lt;E&gt; h = head, p = h, q; ; ) &#123;</span><br><span class="line">            <span class="comment">//获取p节点的元素</span></span><br><span class="line">            E item = p.item;</span><br><span class="line">            <span class="comment">//如果p节点的元素不为空，使用CAS设置p节点引用的元素为null</span></span><br><span class="line">            <span class="keyword">if</span> (item != <span class="keyword">null</span> &amp;&amp; p.casItem(item, <span class="keyword">null</span>)) &#123;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">if</span> (p != h) <span class="comment">// hop two nodes at a time</span></span><br><span class="line">                    <span class="comment">//如果p节点不是head节点则更新head节点，也可以理解为删除该结点后检查head是否与头结点相差两个结点，如果是则更新head节点</span></span><br><span class="line">                    updateHead(h, ((q = p.next) != <span class="keyword">null</span>) ? q : p);</span><br><span class="line">                <span class="keyword">return</span> item;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//如果p节点的下一个节点为null，则说明这个队列为空，更新head结点</span></span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> ((q = p.next) == <span class="keyword">null</span>) &#123;</span><br><span class="line">                updateHead(h, p);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//结点出队失败，重新跳到restartFromHead来进行出队</span></span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (p == q)</span><br><span class="line">                <span class="keyword">continue</span> restartFromHead;</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">                p = q;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -415,8 +416,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/" rel="next" title="JAVA虚拟机浅析">
-                <i class="fa fa-chevron-left"></i> JAVA虚拟机浅析
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89ReentrantLock%E4%B8%8EReentrantReadWriteLock%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" rel="next" title="JUC知识点总结（三）ReentrantLock与ReentrantReadWriteLock源码解析">
+                <i class="fa fa-chevron-left"></i> JUC知识点总结（三）ReentrantLock与ReentrantReadWriteLock源码解析
               </a>
             
           </div>
@@ -425,8 +426,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/" rel="prev" title="JMM与volatile关键字">
-                JMM与volatile关键字 <i class="fa fa-chevron-right"></i>
+              <a href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/" rel="prev" title="JAVA虚拟机浅析">
+                JAVA虚拟机浅析 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -504,7 +505,7 @@
               
                 <a href="/archives/%7C%7Carchive">
               
-                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -515,7 +516,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">4</span>
                   <span class="site-state-item-name">categories</span>
                 </a>
               </div>
@@ -526,7 +527,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-count">26</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
@@ -536,6 +537,22 @@
 
           
 
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
           
 
           

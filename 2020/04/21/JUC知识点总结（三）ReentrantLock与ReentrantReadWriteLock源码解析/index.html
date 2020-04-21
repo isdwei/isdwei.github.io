@@ -87,7 +87,7 @@
 <meta property="og:description" content="8. Lock接口 （ReentrantLock 可重入锁）特性ReentantLock 继承接口 Lock 并实现了接口中定义的方法， 它是一种可重入锁， 除了能完成 synchronized 所能完成的所有工作外，还提供了诸如可响应中断锁、可轮询锁请求、定时锁等避免多线程死锁的方法。   尝试非阻塞地获取锁：tryLock()，调用方法后立刻返回； 能被中断地获取锁：lockInterrupt">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-04-21T08:56:05.000Z">
-<meta property="article:modified_time" content="2020-04-21T06:23:43.164Z">
+<meta property="article:modified_time" content="2020-04-21T14:51:33.645Z">
 <meta property="article:author" content="D. Wei">
 <meta property="article:tag" content="多线程">
 <meta property="article:tag" content="Lock">
@@ -368,9 +368,10 @@
 <h4 id="tryLock-和-lock-和-lockInterruptibly-的区别"><a href="#tryLock-和-lock-和-lockInterruptibly-的区别" class="headerlink" title="tryLock 和 lock 和 lockInterruptibly 的区别"></a>tryLock 和 lock 和 lockInterruptibly 的区别</h4><ol>
 <li>tryLock 能获得锁就返回 true，不能就立即返回 false， tryLock(long timeout, TimeUnit unit)，可以增加时间限制，如果超过该时间段还没获得锁，返回 false</li>
 <li>lock 能获得锁就返回 true，不能的话一直等待获得锁</li>
-<li>lock 和 lockInterruptibly，如果两个线程分别执行这两个方法，但此时中断这两个线程，<strong>lock 不会抛出异常，而 lockInterruptibly 会抛出异常。</strong>  </li>
+<li>lock 和 lockInterruptibly，如果两个线程分别执行这两个方法，但此时中断这两个线程，<strong>lock 不会抛出异常，而 lockInterruptibly 会抛出异常。</strong>  <a id="more"></a>
+<h4 id="与Synchronized区别"><a href="#与Synchronized区别" class="headerlink" title="与Synchronized区别"></a><strong>与Synchronized区别</strong></h4></li>
 </ol>
-<h4 id="与Synchronized区别"><a href="#与Synchronized区别" class="headerlink" title="与Synchronized区别"></a><strong>与Synchronized区别</strong></h4><ul>
+<ul>
 <li>ReentrantLock 通过方法 lock()与 unlock()来进行加锁与解锁操作，与 synchronized 会<br>被 JVM 自动解锁机制不同， ReentrantLock 加锁后需要手动进行解锁。<strong>为了避免程序出</strong><br><strong>现异常而无法正常解锁的情况，使用 ReentrantLock 必须在 finally 控制块中进行解锁操</strong><br><strong>作。</strong></li>
 <li>ReentrantLock 相比 synchronized 的优势是<strong>可中断、公平锁、多个锁</strong>。这种情况下需要<br>使用 ReentrantLock。  </li>
 </ul>
@@ -465,8 +466,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B9%9D%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%9D%A2%E8%AF%95%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/" rel="next" title="JUC知识点总结（九）JAVA线程池">
-                <i class="fa fa-chevron-left"></i> JUC知识点总结（九）JAVA线程池
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89Synchronized%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/" rel="next" title="JUC知识点总结（二）Synchronized底层原理总结">
+                <i class="fa fa-chevron-left"></i> JUC知识点总结（二）Synchronized底层原理总结
               </a>
             
           </div>
@@ -475,8 +476,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/" rel="prev" title="JAVA虚拟机浅析">
-                JAVA虚拟机浅析 <i class="fa fa-chevron-right"></i>
+              <a href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%83%EF%BC%89ConcurrentLinkedQueue%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/" rel="prev" title="JUC知识点总结（七）ConcurrentLinkedQueue">
+                JUC知识点总结（七）ConcurrentLinkedQueue <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -554,7 +555,7 @@
               
                 <a href="/archives/%7C%7Carchive">
               
-                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -565,7 +566,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">4</span>
                   <span class="site-state-item-name">categories</span>
                 </a>
               </div>
@@ -576,7 +577,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-count">26</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
@@ -586,6 +587,22 @@
 
           
 
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
           
 
           

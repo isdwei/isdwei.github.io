@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="Kafka,消息队列,消费者,消费策略," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="Kafka消费者：分区分配策略、协调器、offset1. 消费方式 Push vs Pull　　作为一个消息系统，Kafka遵循了传统的方式，选择由Producer向broker push消息并由Consumer从broker pull消息。一些logging-centric system，比如Facebook的Scribe和Cloudera的Flume，采用push模式。事实上，push模式和p">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka消费者：分区分配策略、协调器、offset">
+<meta property="og:url" content="http://yoursite.com/2020/04/21/Kafka%E6%B6%88%E8%B4%B9%E8%80%85%EF%BC%9A%E5%88%86%E5%8C%BA%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%E5%8D%8F%E8%B0%83%E5%99%A8%E4%B8%8Eoffset/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="Kafka消费者：分区分配策略、协调器、offset1. 消费方式 Push vs Pull　　作为一个消息系统，Kafka遵循了传统的方式，选择由Producer向broker push消息并由Consumer从broker pull消息。一些logging-centric system，比如Facebook的Scribe和Cloudera的Flume，采用push模式。事实上，push模式和p">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="e:/JAVA-SUMMARY/Kafka总结/20180927152618948.jpeg">
+<meta property="og:image" content="e:/JAVA-SUMMARY/Kafka总结/20180927153114194.jpeg">
+<meta property="article:published_time" content="2020-04-21T14:56:07.000Z">
+<meta property="article:modified_time" content="2020-04-21T14:53:16.421Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="Kafka">
+<meta property="article:tag" content="消息队列">
+<meta property="article:tag" content="消费者">
+<meta property="article:tag" content="消费策略">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="e:/JAVA-SUMMARY/Kafka总结/20180927152618948.jpeg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/21/Kafka消费者：分区分配策略协调器与offset/"/>
+
+
+
+
+
+  <title>Kafka消费者：分区分配策略、协调器、offset | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/Kafka%E6%B6%88%E8%B4%B9%E8%80%85%EF%BC%9A%E5%88%86%E5%8C%BA%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%E5%8D%8F%E8%B0%83%E5%99%A8%E4%B8%8Eoffset/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Kafka消费者：分区分配策略、协调器、offset</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T22:56:07+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="Kafka消费者：分区分配策略、协调器、offset"><a href="#Kafka消费者：分区分配策略、协调器、offset" class="headerlink" title="Kafka消费者：分区分配策略、协调器、offset"></a>Kafka消费者：分区分配策略、协调器、offset</h2><h3 id="1-消费方式-Push-vs-Pull"><a href="#1-消费方式-Push-vs-Pull" class="headerlink" title="1. 消费方式 Push vs Pull　　"></a>1. 消费方式 Push vs Pull　　</h3><p>作为一个消息系统，Kafka遵循了传统的方式，选择由Producer向broker push消息并由Consumer从broker pull消息。一些logging-centric system，比如Facebook的Scribe和Cloudera的Flume，采用push模式。事实上，push模式和pull模式各有优劣。 push模式很难适应消费速率不同的消费者，因为消息发送速率是由broker决定的。<strong>push模式的目标是尽可能以最快速度传递消息，但是这样很容易造成Consumer来不及处理消息，典型的表现就是拒绝服务以及网络拥塞。而pull模式则可以根据Consumer的消费能力以适当的速率消费消息</strong>。 对于Kafka而言，pull模式更合适。<strong>pull模式可简化broker的设计，Consumer可自主控制消费消息的速率，同时Consumer可以自己控制消费方式——即可批量消费也可逐条消费，同时还能选择不同的提交方式从而实现不同的传输语义</strong>。 <strong>pull模式的不足在于，如果Kafka没有数据，消费者可能会陷入循环中，一直返回空数据</strong>。</p>
+<h3 id="2-分区分配策略"><a href="#2-分区分配策略" class="headerlink" title="2. 分区分配策略"></a>2. 分区分配策略</h3><p>Kafka保证同一Consumer Group中只有一个Consumer会消费某条消息，实际上，Kafka保证的是稳定状态下每一个Consumer实例只会消费某一个或多个特定Partition的数据，而某个Partition的数据只会被某一个特定的Consumer实例所消费。也就是说Kafka对消息的分配是以Partition为单位分配的，而非以每一条消息作为分配单元。这样设计的劣势是无法保证同一个Consumer Group里的Consumer均匀消费数据，优势是每个Consumer不用都跟大量的Broker通信，减少通信开销，同时也降低了分配难度，实现也更简单。另外，因为同一个Partition里的数据是有序的，这种设计可以保证每个Partition里的数据可以被有序消费。</p>
+<p>一个Consumer Group中的多个consumer是如何消费不同的partition？</p>
+<a id="more"></a>
+<p>2.1 Kafka有两种分配策略。</p>
+<ul>
+<li><p>RangeAssignor，默认</p>
+<p>Range 范围分区策略是对每个 topic 而言的。首先对同一个 topic 里面的分区按照序号进行排序，并对消费者按照字母顺序进行排序。假如现在有 10 个分区，3 个消费者，排序后的分区将会是0,1,2,3,4,5,6,7,8,9；消费者排序完之后将会是C1-0,C2-0,C3-0。通过 partitions数/consumer数来决定每个消费者应该消费几个分区。如果除不尽，那么前面几个消费者将会多消费 1 个分区。</p>
+<p><strong>Range 范围分区的弊端：</strong></p>
+<p>针对 1 个 topic 而言，C1-0消费者多消费1个分区影响不是很大。如果有 N 多个 topic，那么针对每个 topic，消费者 C1-0 都将多消费 1 个分区，topic越多，C1-0 消费的分区会比其他消费者明显多消费 N 个分区。这就是 Range 范围分区的一个很明显的弊端了</p>
+</li>
+<li><p>RoundRobinAssignor</p>
+<p>RoundRobin 轮询分区策略，是把所有的 partition 和所有的 consumer 都列出来，然后按照 hashcode 进行排序，最后通过轮询算法来分配 partition 给到各个消费者。</p>
+<p>如果想要使用RoundRobin 轮询分区策略，必须满足如下两个条件：</p>
+<ul>
+<li>每个消费者订阅的主题，必须是相同的</li>
+<li>每个主题的消费者实例都是相同的。(即：上面的第一种情况，才优先使用 RoundRobin 轮询分区策略)</li>
+</ul>
+</li>
+</ul>
+<p>2.2 什么时候触发分区分配策略</p>
+<p>当出现以下几种情况时，Kafka 会进行一次分区分配操作，即 Kafka 消费者端的 Rebalance 操作</p>
+<ul>
+<li>同一个 consumer 消费者组 group.id 中，新增了消费者进来，会执行 Rebalance 操作</li>
+<li>消费者离开当期所属的 consumer group组。比如 主动停机 或者 宕机</li>
+<li>分区数量发生变化时(即 topic 的分区数量发生变化时)</li>
+<li>消费者主动取消订阅</li>
+</ul>
+<p>Kafka 消费端的 Rebalance 机制，规定了一个 Consumer group 下的所有 consumer 如何达成一致来分配订阅 topic 的每一个分区。而具体如何执行分区策略，就是上面提到的 Range 范围分区 和 RoundRobin 轮询分区 两种内置的分区策略。</p>
+<p>因为群组里的消费者共同读取主题的分区，所以当一个消费者被关闭或发生崩溃时，它就离开了群组，原本由它读取的分区将由群组里的其他消费者来读取。同时在主题发生变化时 ， 比如添加了新的分区，也会发生分区与消费者的重新分配，分区的所有权从一个消费者转移到另一个消费者，这样的行为被称为再均衡。正是因为再均衡，所以消费费者群组才能保证高可用性和伸缩性。Consumer Rebalance的算法如下：</p>
+<ul>
+<li>将目标Topic下的所有Partirtion排序，存于</li>
+<li>对某Consumer Group下所有Consumer排序，存于，第i个Consumer记为</li>
+<li>，向上取整</li>
+<li>解除对原来分配的Partition的消费权（i从0开始）</li>
+<li>将第到第个Partition分配给</li>
+</ul>
+<h3 id="3-协调器"><a href="#3-协调器" class="headerlink" title="3. 协调器"></a>3. 协调器</h3><p>顾名思义，协调器负责协调工作。本节所讲的协调器，是用来协调消费者工作分配的。简单点说，就是消费者启动后，到可以正常消费前，这个阶段的初始化工作。消费者能够正常运转起来，全有赖于协调器。</p>
+<p>主要的协调器有如下两个：</p>
+<ul>
+<li><p>消费者协调器（ConsumerCoordinator）</p>
+</li>
+<li><p>组协调器（GroupCoordinator）</p>
+</li>
+</ul>
+<p>此外还有任务管理协调器（WorkCoordinator），用作kafka connect的works管理。</p>
+<p>kafka引入协调器有其历史过程，原来consumer信息依赖于zookeeper存储，当代理或消费者发生变化时，引发消费者平衡，此时消费者之间是互不透明的，每个消费者和zookeeper单独通信，容易造成羊群效应和脑裂问题。</p>
+<p>为了解决这些问题，kafka引入了协调器。服务端引入组协调器（GroupCoordinator），消费者端引入消费者协调器（ConsumerCoordinator）。每个broker启动的时候，都会创建GroupCoordinator实例，管理部分消费组（集群负载均衡）和组下每个消费者消费的偏移量（offset）。每个consumer实例化时，同时实例化一个ConsumerCoordinator对象，负责同一个消费组下各个消费者和服务端组协调器之前的通信。</p>
+<img src="E:\JAVA-SUMMARY\Kafka总结\20180927152618948.jpeg" alt="uploading.4e448015.gif" style="zoom:50%;" />
+
+<p>3.1 消费者协调器（ConsumerCoordinator）</p>
+<p>消费者协调器主要负责如下工作：</p>
+<ul>
+<li><p>更新消费者缓存的MetaData</p>
+</li>
+<li><p>向组协调器申请加入组</p>
+</li>
+<li><p>消费者加入组后的相应处理</p>
+</li>
+<li><p>请求离开消费组</p>
+</li>
+<li><p>向组协调器提交偏移量</p>
+</li>
+<li><p>通过心跳，保持组协调器的连接感知。</p>
+</li>
+<li><p>被组协调器选为leader的消费者的协调器，负责消费者分区分配。分配结果发送给组协调器。</p>
+</li>
+<li><p>非leader的消费者，通过消费者协调器和组协调器同步分配结果。</p>
+</li>
+</ul>
+<p>3.2 组协调器（GroupCoordinator）</p>
+<p>组协调器负责处理消费者协调器发过来的各种请求。它主要提供如下功能：</p>
+<ul>
+<li>在与之连接的消费者中选举出消费者leader</li>
+<li>下发leader消费者返回的消费者分区分配结果给所有的消费者</li>
+<li>管理消费者的消费偏移量提交，保存在kafka的内部主题中</li>
+<li>和消费者心跳保持，知道哪些消费者已经死掉，组中存活的消费者是哪些。</li>
+<li>组协调器在broker启动的时候实例化，每个组协调器负责一部分消费组的管理。</li>
+</ul>
+<p>3.3 消费者入组过程</p>
+<p>下图展示了消费者启动选取leader、入组的过程。</p>
+<img src="E:\JAVA-SUMMARY\Kafka总结\20180927153114194.jpeg" alt="uploading.4e448015.gif" style="zoom:50%;" />
+
+<p>消费者入组的过程，很好的展示了消费者协调器和组协调器之间是如何配合工作的。leader consumer会承担分区分配的工作，这样kafka集群的压力会小很多。同组的consumer通过组协调器保持同步。消费者和分区的对应关系持久化在kafka内部主题。 ———————————————— 版权声明：本文为CSDN博主「稀有气体」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。 原文链接：<a href="https://blog.csdn.net/liyiming2017/article/details/82867765" target="_blank" rel="noopener">https://blog.csdn.net/liyiming2017/article/details/82867765</a></p>
+<h3 id="4-offset的维护"><a href="#4-offset的维护" class="headerlink" title="4. offset的维护"></a>4. offset的维护</h3><p>4.1 offset的作用</p>
+<p>由于 consumer 在消费过程中可能会出现断电宕机等故障， consumer 恢复后，需要从故 障前的位置的继续消费，所以 consumer 需要实时记录自己消费到了哪个 offset，以便故障恢复后继续消费。</p>
+<p>Kafka 0.9 版本之前， consumer 默认将 offset 保存在 Zookeeper 中，从 0.9 版本开始， consumer 默认将 offset 提交到Kafka 一个内置的 topic 中，该 topic 为__consumer_offsets。如果有消费者退出或者新分区加入，此时就会触发再均衡。完成再均衡之后，每个消费者可能分配到新的分区，而不是之前处理的那个。为了能够继续之前的工作，消费者需要读取每个分区最后一次提交的偏移量，然后从偏移量指定的地方继续处理。 因为这个原因，所以如果不能正确提交偏移量，就可能会导致数据丢失或者重复出现消费，比如下面情况：</p>
+<ul>
+<li>如果提交的偏移量小于客户端处理的最后一个消息的偏移量 ，那么处于两个偏移量之间的消息就会被重复消费；</li>
+<li>如果提交的偏移量大于客户端处理的最后一个消息的偏移量，那么处于两个偏移量之间的消息将会丢失。</li>
+</ul>
+<p>4.2 offset的提交</p>
+<p>Kafka 支持自动提交和手动提交偏移量两种方式。</p>
+<ul>
+<li><p>自动提交方式：只需要将消费者的 <code>enable.auto.commit</code> 属性配置为 <code>true</code> 即可完成自动提交的配置。 此时每隔固定的时间，消费者就会把 <code>poll()</code> 方法接收到的最大偏移量进行提交，提交间隔由 <code>auto.commit.interval.ms</code> 属性进行配置，默认值是 5s。</p>
+<p>使用自动提交是存在隐患的，假设我们使用默认的 5s 提交时间间隔，在最近一次提交之后的 3s 发生了再均衡，再均衡之后，消费者从最后一次提交的偏移量位置开始读取消息。这个时候偏移量已经落后了 3s ，所以在这 3s 内到达的消息会被重复处理。可以通过修改提交时间间隔来更频繁地提交偏移量，减小可能出现重复消息的时间窗，不过这种情况是无法完全避免的。</p>
+</li>
+<li><p>手动提交方式：基于这个原因，Kafka 也提供了手动提交偏移量的 API，使得用户可以更为灵活的提交偏移量。用户可以通过将 <code>enable.auto.commit</code> 设为 <code>false</code>，然后手动提交偏移量。基于用户需求手动提交偏移量可以分为两大类：</p>
+<ul>
+<li>手动提交当前偏移量：即手动提交当前轮询的最大偏移量；</li>
+<li>手动提交固定偏移量：即按照业务需求，提交某一个固定的偏移量。</li>
+</ul>
+<p>手动提交也分为同步提交和异步提交：</p>
+<ul>
+<li><p>同步提交： 通过调用 <code>consumer.commitSync()</code> 来进行同步提交，不传递任何参数时提交的是当前轮询的最大偏移量。 如果某个提交失败，同步提交还会进行重试，这可以保证数据能够最大限度提交成功，但是同时也会降低程序的吞吐量。</p>
+</li>
+<li><p>异步提交：异步提交可以提高程序的吞吐量，因为此时你可以尽管请求数据，而不用等待 Broker 的响应。异步提交存在的问题是，在提交失败的时候不会进行自动重试，实际上也不能进行自动重试。 基于这个原因，某些情况下，需要同时组合同步和异步两种提交方式。</p>
+</li>
+<li><p>同步加异步提交：</p>
+<ul>
+<li>即在正常的轮询中使用异步提交来保证吞吐量</li>
+<li>如果程序报错，finally中，提交偏移量，采用同步方式，确保提交成功</li>
+<li>再均衡前的回调方法中，提交偏移量，采用同步方式，确保提交成功</li>
+</ul>
+<p>这样既保证了吞吐量，也保证了提交偏移量的安全性。另外由于再均衡前提交偏移量，降低了重复消费可能。</p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="5-独立的消费者"><a href="#5-独立的消费者" class="headerlink" title="5. 独立的消费者"></a>5. 独立的消费者</h3><p>因为 Kafka 的设计目标是高吞吐和低延迟，所以在 Kafka 中，消费者通常都是从属于某个群组的，这是因为单个消费者的处理能力是有限的。但是某些时候你的需求可能很简单，比如可能只需要一个消费者从一个主题的所有分区或者某个特定的分区读取数据，这个时候就不需要消费者群组和再均衡了， 只需要把主题或者分区分配给消费者，然后开始读取消息井提交偏移量即可。在这种情况下，就不需要订阅主题， 取而代之的是消费者为自己分配分区。 一个消费者可以订阅主题（井加入消费者群组），或者为自己分配分区。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Kafka/" rel="tag"># Kafka</a>
+          
+            <a href="/tags/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97/" rel="tag"># 消息队列</a>
+          
+            <a href="/tags/%E6%B6%88%E8%B4%B9%E8%80%85/" rel="tag"># 消费者</a>
+          
+            <a href="/tags/%E6%B6%88%E8%B4%B9%E7%AD%96%E7%95%A5/" rel="tag"># 消费策略</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/21/Kafka%E7%94%9F%E4%BA%A7%E8%80%85%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%8F%AF%E9%9D%A0%E6%80%A7%E7%AD%96%E7%95%A5%E4%B8%8E%E5%B9%82%E7%AD%89%E6%80%A7/" rel="next" title="Kafka生产者：数据可靠性策略与幂等性">
+                <i class="fa fa-chevron-left"></i> Kafka生产者：数据可靠性策略与幂等性
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/21/Kafka%EF%BC%9A%E6%95%B4%E7%90%86%E7%9A%84%E4%B8%80%E4%BA%9B%E9%9D%A2%E8%AF%95%E9%A2%98/" rel="prev" title="Kafka知识点总结">
+                Kafka知识点总结 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">20</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">4</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">26</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kafka消费者：分区分配策略、协调器、offset"><span class="nav-number">1.</span> <span class="nav-text">Kafka消费者：分区分配策略、协调器、offset</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-消费方式-Push-vs-Pull"><span class="nav-number">1.1.</span> <span class="nav-text">1. 消费方式 Push vs Pull　　</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-分区分配策略"><span class="nav-number">1.2.</span> <span class="nav-text">2. 分区分配策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-协调器"><span class="nav-number">1.3.</span> <span class="nav-text">3. 协调器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-offset的维护"><span class="nav-number">1.4.</span> <span class="nav-text">4. offset的维护</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-独立的消费者"><span class="nav-number">1.5.</span> <span class="nav-text">5. 独立的消费者</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

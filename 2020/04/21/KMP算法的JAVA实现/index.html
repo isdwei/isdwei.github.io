@@ -68,7 +68,7 @@
 
 
 
-  <meta name="keywords" content="算法,LeetCode,KMP," />
+  <meta name="keywords" content="算法,KMP,LeetCode," />
 
 
 
@@ -87,11 +87,11 @@
 <meta property="og:description" content="注意next数组含义 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859public class KMP &amp;#123;    public static void main(String[] args) &amp;#123;">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2020-04-21T08:56:05.000Z">
-<meta property="article:modified_time" content="2020-04-21T06:31:46.623Z">
+<meta property="article:modified_time" content="2020-04-21T14:53:47.378Z">
 <meta property="article:author" content="D. Wei">
 <meta property="article:tag" content="算法">
-<meta property="article:tag" content="LeetCode">
 <meta property="article:tag" content="KMP">
+<meta property="article:tag" content="LeetCode">
 <meta name="twitter:card" content="summary">
 
 
@@ -355,7 +355,7 @@
 
       
         <p>注意next数组含义</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">KMP</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">char</span>[] s = <span class="string">"ceabtcarbc"</span>.toCharArray();</span><br><span class="line">        <span class="keyword">char</span>[] p = <span class="string">"tcarb"</span>.toCharArray();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        System.out.println(kmp(s, p));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * KMP算法，求最大公共子串在原字符串的起始位置</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> s 原字符串</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> p 子字符串</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">kmp</span><span class="params">(<span class="keyword">char</span>[] s,<span class="keyword">char</span>[] p)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> i=<span class="number">0</span>,j=<span class="number">0</span>;</span><br><span class="line">        <span class="keyword">int</span>[] next= next(p);</span><br><span class="line">        <span class="keyword">while</span> (i&lt;s.length&amp;&amp;j&lt;p.length) &#123;</span><br><span class="line">            <span class="keyword">if</span> (j==-<span class="number">1</span>||s[i] == p[j]) &#123;</span><br><span class="line">                i++;</span><br><span class="line">                j++;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                j = next[j];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(j==p.length)&#123;</span><br><span class="line">            <span class="keyword">return</span> i-j;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 初始化Next数组</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> n</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> int[] n, next[i]表示长度为i字符串的最大相同前后缀数</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] next(<span class="keyword">char</span>[] n) &#123;</span><br><span class="line">        <span class="keyword">int</span>[] next = <span class="keyword">new</span> <span class="keyword">int</span>[n.length];</span><br><span class="line">        next[<span class="number">0</span>] = -<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">int</span> k = -<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">int</span> j = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">while</span> (j&lt;n.length-<span class="number">1</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span>(k==-<span class="number">1</span>||n[k]==n[j]) &#123;</span><br><span class="line">                k++;</span><br><span class="line">                j++;</span><br><span class="line">                <span class="keyword">if</span>(n[k]!=n[j]) &#123;</span><br><span class="line">                    next[j] = k;</span><br><span class="line">                &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">                    next[j]=next[k];</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">                k=next[k];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> next;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">KMP</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">char</span>[] s = <span class="string">"ceabtcarbc"</span>.toCharArray();</span><br><span class="line">        <span class="keyword">char</span>[] p = <span class="string">"tcarb"</span>.toCharArray();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        System.out.println(kmp(s, p));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * KMP算法，求最大公共子串在原字符串的起始位置</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> s 原字符串</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> p 子字符串</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">kmp</span><span class="params">(<span class="keyword">char</span>[] s,<span class="keyword">char</span>[] p)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> i=<span class="number">0</span>,j=<span class="number">0</span>;</span><br><span class="line">        <span class="keyword">int</span>[] next= next(p);</span><br><span class="line">        <span class="keyword">while</span> (i&lt;s.length&amp;&amp;j&lt;p.length) &#123;</span><br><span class="line">            <span class="keyword">if</span> (j==-<span class="number">1</span>||s[i] == p[j]) &#123;</span><br><span class="line">                i++;</span><br><span class="line">                j++;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                j = next[j];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(j==p.length)&#123;</span><br><span class="line">            <span class="keyword">return</span> i-j;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&lt;!--more--&gt;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 初始化Next数组</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> n</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> int[] n, next[i]表示长度为i字符串的最大相同前后缀数</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] next(<span class="keyword">char</span>[] n) &#123;</span><br><span class="line">        <span class="keyword">int</span>[] next = <span class="keyword">new</span> <span class="keyword">int</span>[n.length];</span><br><span class="line">        next[<span class="number">0</span>] = -<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">int</span> k = -<span class="number">1</span>;</span><br><span class="line">        <span class="keyword">int</span> j = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">while</span> (j&lt;n.length-<span class="number">1</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span>(k==-<span class="number">1</span>||n[k]==n[j]) &#123;</span><br><span class="line">                k++;</span><br><span class="line">                j++;</span><br><span class="line">                <span class="keyword">if</span>(n[k]!=n[j]) &#123;</span><br><span class="line">                    next[j] = k;</span><br><span class="line">                &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">                    next[j]=next[k];</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">else</span> &#123;</span><br><span class="line">                k=next[k];</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> next;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <h3 id=""><a href="#" class="headerlink" title=""></a></h3>
       
@@ -376,9 +376,9 @@
           
             <a href="/tags/%E7%AE%97%E6%B3%95/" rel="tag"># 算法</a>
           
-            <a href="/tags/LeetCode/" rel="tag"># LeetCode</a>
-          
             <a href="/tags/KMP/" rel="tag"># KMP</a>
+          
+            <a href="/tags/LeetCode/" rel="tag"># LeetCode</a>
           
         </div>
       
@@ -391,8 +391,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2020/04/21/LeetCode%E9%97%AE%E9%A2%98%E6%95%B4%E7%90%86/" rel="next" title="LeetCode问题整理">
-                <i class="fa fa-chevron-left"></i> LeetCode问题整理
+              <a href="/2020/04/21/LRU%20LFU%20%E4%B8%A4%E7%A7%8D%E7%BC%93%E5%AD%98%E7%AE%97%E6%B3%95%E7%9A%84JAVA%E5%AE%9E%E7%8E%B0/" rel="next" title="LFU、LRU的实现总结">
+                <i class="fa fa-chevron-left"></i> LFU、LRU的实现总结
               </a>
             
           </div>
@@ -480,7 +480,7 @@
               
                 <a href="/archives/%7C%7Carchive">
               
-                  <span class="site-state-item-count">16</span>
+                  <span class="site-state-item-count">20</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -491,7 +491,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">3</span>
+                  <span class="site-state-item-count">4</span>
                   <span class="site-state-item-name">categories</span>
                 </a>
               </div>
@@ -502,7 +502,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">18</span>
+                  <span class="site-state-item-count">26</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
@@ -512,6 +512,22 @@
 
           
 
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
           
 
           
