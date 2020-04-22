@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="主从复制,MVCC,锁," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="4. 主从复制 复制的基本原理   master 将改变记录到二进制日志（binary log） slave 将 master 的二进制日志拷贝到他的中继日志（relay log） slave 重做中继日志中的时间，将改变应用到自己的数据库中。MySQL的主从复制是异步且串行化的（最大问题：存在延时）   主从复制的基本原则 每个slave只能有一个master，每个master可以有多个slav">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL知识点总结（五）主从复制，MySQL中的锁 与 MVCC">
+<meta property="og:url" content="http://yoursite.com/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%94%EF%BC%89%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%EF%BC%8CMySQL%E4%B8%AD%E7%9A%84%E9%94%81-%E4%B8%8E-MVCC/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="4. 主从复制 复制的基本原理   master 将改变记录到二进制日志（binary log） slave 将 master 的二进制日志拷贝到他的中继日志（relay log） slave 重做中继日志中的时间，将改变应用到自己的数据库中。MySQL的主从复制是异步且串行化的（最大问题：存在延时）   主从复制的基本原则 每个slave只能有一个master，每个master可以有多个slav">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-22T14:43:00.000Z">
+<meta property="article:modified_time" content="2020-04-22T14:43:50.775Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="主从复制">
+<meta property="article:tag" content="MVCC">
+<meta property="article:tag" content="锁">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/22/ySQL知识点总结（五）主从复制，MySQL中的锁-与-MVCC/"/>
+
+
+
+
+
+  <title>MySQL知识点总结（五）主从复制，MySQL中的锁 与 MVCC | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%94%EF%BC%89%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%EF%BC%8CMySQL%E4%B8%AD%E7%9A%84%E9%94%81-%E4%B8%8E-MVCC/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MySQL知识点总结（五）主从复制，MySQL中的锁 与 MVCC</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-22T22:43:00+08:00">
+                2020-04-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="4-主从复制"><a href="#4-主从复制" class="headerlink" title="4. 主从复制"></a>4. 主从复制</h3><ul>
+<li>复制的基本原理</li>
+</ul>
+<ol>
+<li>master 将改变记录到二进制日志（binary log）</li>
+<li>slave 将 master 的二进制日志拷贝到他的中继日志（relay log）</li>
+<li>slave 重做中继日志中的时间，将改变应用到自己的数据库中。MySQL的主从复制是异步且串行化的（最大问题：存在延时）</li>
+</ol>
+<ul>
+<li><p>主从复制的基本原则</p>
+<p>每个slave只能有一个master，每个master可以有多个slave</p>
+</li>
+</ul>
+<h3 id="5-MySQL中的锁"><a href="#5-MySQL中的锁" class="headerlink" title="5. MySQL中的锁"></a>5. MySQL中的锁</h3><h4 id="5-1-从对数据操作类型分"><a href="#5-1-从对数据操作类型分" class="headerlink" title="5.1 从对数据操作类型分"></a>5.1 从对数据操作类型分</h4><p><strong>共享锁/读锁</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="string">`test`</span> <span class="keyword">WHERE</span> <span class="string">`id`</span> = <span class="number">1</span> <span class="keyword">LOCK</span> <span class="keyword">IN</span> <span class="keyword">SHARE</span> <span class="keyword">MODE</span>;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>多个事务的查询语句可以共用一把共享锁；</li>
+<li>如果只有一个事务拿到了共享锁，则该事务可以对数据进行 UPDATE DETELE 等操作；</li>
+<li>如果有多个事务拿到了共享锁，则所有事务都不能对数据进行 UPDATE DETELE 等操作。</li>
+</ol>
+<p><strong>排他锁/写锁</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="string">`test`</span> <span class="keyword">WHERE</span> <span class="string">`id`</span> = <span class="number">1</span> <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>只有一个事务能获取该数据的排它锁；</li>
+<li>一旦有一个事务获取了该数据的排它锁之后，其余事务对于该数据的操作将会被阻塞，直至锁释放。</li>
+</ol>
+<p>自增锁</p>
+<p> 如果表中存在自增字段，MySQL便会自动维护一个自增锁 </p>
+<blockquote>
+<p>为什么主键设置成自增</p>
+</blockquote>
+<p> 主键上设置自增属性，可以保证每次插入都是插入到最后面，可以有效的减少索引页的分裂和数据的移动。 </p>
+<p>自增锁会导致出现幻读的情况（某个事务中途插入后会导致在本事务中主键不连续）</p>
+<h4 id="5-2从操作粒度分"><a href="#5-2从操作粒度分" class="headerlink" title="5.2从操作粒度分"></a>5.2从操作粒度分</h4><p><strong>行锁/记录锁（Record Locks）</strong>   SELECT * FROM <code>test</code> WHERE <code>id</code>=1 FOR UPDATE;  锁住一行记录</p>
+<ul>
+<li><p>操作未使用索引，行锁会升级为表锁</p>
+</li>
+<li><p><strong>间隙锁（Gap Lock）</strong></p>
+<ol>
+<li>间隙锁只有在事务隔离级别 RR 中才会产生；</li>
+<li>唯一索引只有锁住多条记录或者一条不存在的记录的时候，才会产生间隙锁，指定给某条存在的记录加锁的时候，只会加记录锁，不会产生间隙锁；</li>
+<li>普通索引不管是锁住单条，还是多条记录，都会产生间隙锁；</li>
+<li>间隙锁会封锁该条记录相邻两个键之间的空白区域，防止其它事务在这个区域内插入、修改、删除数据，这是为了防止出现幻读现象；</li>
+</ol>
+</li>
+</ul>
+<p><strong>表锁</strong> 偏向MyISAM存储引擎，开销小，加锁快，无死锁，锁定粒度大，发生锁冲突的概率最高，并发最低</p>
+<h4 id="5-3-数据库是如何加锁的"><a href="#5-3-数据库是如何加锁的" class="headerlink" title="5.3 数据库是如何加锁的"></a>5.3 数据库是如何加锁的</h4><p>大体的举个例子如下：</p>
+<p>一个sql ：select * from user where id=1;</p>
+<p>数据库收到sql后会，判断id是不是索引：如果是索引，数据库则就行进行检索索引，对这条索引进行加锁，加锁加的是行锁；如果Id不是索引，则加的是表锁。</p>
+<p>如果加的是行锁，会判断根据sql，添加不同的类型的行锁：如果是查询语句，所加的共享锁（S锁，读锁）；如果是增删改语句，则加的是排他锁。</p>
+<p>如果加的表锁，则会根据加的是表锁，则会判断表是否存在其他的锁。如果存在锁且是S锁，则可以进行加表锁。如果加的是X锁，则无法加表锁。</p>
+<p>在加表锁的时候，是如何判断有锁的？重新检索索引，来判断是加锁？那是不可能的，因为那样效率会低的令人发指，尤其是表级锁，需要检索完所有的数据才能知道是表级别锁，效率可想而知。这个时候就有了意向锁。</p>
+<p>意向锁，只是一个意向，他的意思是：这个表，里面的数据或索引已经加锁了。其实他就是一个标志，来告诉数据库已经加锁的标志。<strong>意向锁的存在说明该结点的下层结点正在被加锁</strong>。</p>
+<p><strong>对任一元组加锁时，必须先对它所在的关系加意向锁</strong>。所以正确的是，加共享锁（S锁，读锁）时候，会在之前加上意向共享锁（IS锁）。告诉下一个要操作这张表的事物，这张表的数据加了共享锁。</p>
+<p> 通过锁实现的是，读的时候不能写（允许多个线程同时读，即共享锁，S锁），写的时候不能读（一次最多只能有一个线程对同一份数据进行写操作，即排它锁，X锁）。这样的加锁访问，只能实现并发的读，因为它最终实现的是读写串行化，这样就大大降低了数据库的读写性能。加锁访问其实就是和MVCC相对的LBCC，即基于锁的并发控制（Lock-Based Concurrent Control），是四种隔离级别中级别最高的Serialize隔离级别。</p>
+<h3 id="6-MVCC-Multi-Version-Concurrency-Control-多版本并发控制"><a href="#6-MVCC-Multi-Version-Concurrency-Control-多版本并发控制" class="headerlink" title="6. MVCC( Multi-Version Concurrency Control 多版本并发控制 )"></a>6. MVCC( Multi-Version Concurrency Control 多版本并发控制 )</h3><p>MVCC 是一种并发控制的方法，一般在数据库管理系统中，实现对数据库的并发访问；在编程语言中实现事务内存 。通俗的讲就是MVCC通过保存数据的历史版本，根据比较版本号来处理数据的是否显示，从而达到读取数据的时候不需要加锁就可以保证事务隔离性的效果。</p>
+<ul>
+<li>MVCC每次更新操作都会复制一条新的记录，新纪录的创建时间为当前事务id</li>
+<li>优势为读不加锁，读写不冲突</li>
+<li>InnoDb存储引擎中，每行数据包含了一些隐藏字段 DATA_TRX_ID，DATA_ROLL_PTR，DB_ROW_ID，DELETE BIT</li>
+<li>DATA_TRX_ID 字段记录了数据的创建和删除时间，这个时间指的是对数据进行操作的事务的id</li>
+<li>DATA_ROLL_PTR 指向当前数据的undo log记录，回滚数据就是通过这个指针</li>
+<li>DELETE BIT位用于标识该记录是否被删除，这里的不是真正的删除数据，而是标志出来的删除。真正意义的删除是在mysql进行数据的GC，清理历史版本数据的时候。</li>
+</ul>
+<p>具体的DML：</p>
+<ul>
+<li>INSERT：创建一条新数据，DB_TRX_ID中的创建时间为当前事务id，DB_ROLL_PT为NULL</li>
+<li>DELETE：将当前行的DB_TRX_ID中的删除时间设置为当前事务id，DELETE BIT设置为1</li>
+<li>UPDATE：复制了一行，新行的DB_TRX_ID中的创建时间为当前事务id，删除时间为空，DB_ROLL_PT指向了上一个版本的记录，事务提交后DB_ROLL_PT置为NULL</li>
+</ul>
+<p>为了提高并发度，InnoDb提供了这个「非锁定读」，即不需要等待访问行上的锁释放，又解决了幻读。</p>
+<h4 id="6-1MVCC与隔离级别"><a href="#6-1MVCC与隔离级别" class="headerlink" title="6.1MVCC与隔离级别"></a>6.1MVCC与隔离级别</h4><ul>
+<li>Read Uncommitted每次都读取记录的最新版本，会出现脏读，未实现MVCC</li>
+<li>Serializable对所有读操作都加锁，读写发生冲突，不会使用MVCC</li>
+<li>SELECT <ul>
+<li>(RR级别)InnoDB检查每行数据，确保它们符合两个标准：</li>
+<li>只查找创建时间早于当前事务id的记录，这确保当前事务读取的行都是事务之前已经存在的，或者是由当前事务创建或修改的行</li>
+<li>行的DELETE BIT为1时，查找删除时间晚于当前事务id的记录，确定了当前事务开始之前，行没有被删除</li>
+<li>(RC级别)每次重新计算read view，read view的范围为InnoDb中最大的事务id，为避免脏读读取的是DB_ROLL_PT指向的记录</li>
+</ul>
+</li>
+</ul>
+<p>简单的SELECT不加条件的查询在RR下肯定是读不到隔壁事务提交的数据的。但是仍然可能在执行INSERT/UPDATE时遇到幻读现象。因为SELECT 不加锁的快照读行为是无法限制其他事务对新增重合范围的数据的插入的。</p>
+<p>所以还要引入第二个机制。</p>
+<h4 id="6-2-Next-Key-Lock"><a href="#6-2-Next-Key-Lock" class="headerlink" title="6.2 Next-Key Lock"></a>6.2 Next-Key Lock</h4><p>其实更多的幻读现象是通过写操作来发现的，如SELECT了3条数据，UPDATE的时候可能返回了4个成功结果，或者INSERT某条不在的数据时忽然报错说唯一索引冲突等。</p>
+<p>首先来了解一下InnoDB的锁机制，InnoDB有三种行锁：</p>
+<ul>
+<li>Record Lock：单个行记录上的锁</li>
+<li>Gap Lock：间隙锁，锁定一个范围，但不包括记录本身。GAP锁的目的，是为了防止同一事务的两次当前读，出现幻读的情况</li>
+<li>Next-Key Lock：前两个锁的加和，锁定一个范围，并且锁定记录本身。对于行的查询，都是采用该方法，主要目的是解决幻读的问题</li>
+</ul>
+<p>如果是带排他锁操作（除了INSERT/UPDATE/DELETE这种，还包括SELECT FOR UPDATE/LOCK IN SHARE MODE等），它们默认都在操作的记录上加了Next-Key Lock。只有使用了这里的操作后才会在相应的记录周围和记录本身加锁，即Record Lock + Gap Lock，所以会导致有冲突操作的事务阻塞进而超时失败。</p>
+<p>隔离级别越高并发度越差，性能越差，虽然MySQL默认的是RR，但是如果业务不需要严格的没有幻读现象，是可以降低为RC的或修改配置innodb_locks_unsafe_for_binlog为1 来避免Gap Lock的。 注意有的时候MySQL会自动对Next-Key Lock进行优化，退化为只加Record Lock，不加Gap Lock，如相关条件字段为主键时直接加Record Lock。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/" rel="tag"># 主从复制</a>
+          
+            <a href="/tags/MVCC/" rel="tag"># MVCC</a>
+          
+            <a href="/tags/%E9%94%81/" rel="tag"># 锁</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/22/MySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%9B%9B%EF%BC%89MySQL%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%EF%BC%8Cexplain%E4%B8%8E%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96/" rel="next" title="MySQL知识点总结（四）MySQL性能分析，explain与索引优化">
+                <i class="fa fa-chevron-left"></i> MySQL知识点总结（四）MySQL性能分析，explain与索引优化
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">47</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-主从复制"><span class="nav-number">1.</span> <span class="nav-text">4. 主从复制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-MySQL中的锁"><span class="nav-number">2.</span> <span class="nav-text">5. MySQL中的锁</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#5-1-从对数据操作类型分"><span class="nav-number">2.1.</span> <span class="nav-text">5.1 从对数据操作类型分</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-2从操作粒度分"><span class="nav-number">2.2.</span> <span class="nav-text">5.2从操作粒度分</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-3-数据库是如何加锁的"><span class="nav-number">2.3.</span> <span class="nav-text">5.3 数据库是如何加锁的</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-MVCC-Multi-Version-Concurrency-Control-多版本并发控制"><span class="nav-number">3.</span> <span class="nav-text">6. MVCC( Multi-Version Concurrency Control 多版本并发控制 )</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#6-1MVCC与隔离级别"><span class="nav-number">3.1.</span> <span class="nav-text">6.1MVCC与隔离级别</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#6-2-Next-Key-Lock"><span class="nav-number">3.2.</span> <span class="nav-text">6.2 Next-Key Lock</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

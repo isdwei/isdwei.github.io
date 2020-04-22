@@ -259,7 +259,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%83%EF%BC%89ConcurrentLinkedQueue%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/Yarn%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BB%84%E6%88%90%E4%B8%8E%E5%9F%BA%E6%9C%AC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="D. Wei">
@@ -278,7 +278,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%83%EF%BC%89ConcurrentLinkedQueue%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/" itemprop="url">JUC知识点总结（七）ConcurrentLinkedQueue</a></h1>
+                <a class="post-title-link" href="/2020/04/21/Yarn%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BB%84%E6%88%90%E4%B8%8E%E5%9F%BA%E6%9C%AC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/" itemprop="url">Yarn的设计组成与基本工作流程</a></h1>
         
 
         <div class="post-meta">
@@ -290,7 +290,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:55:00+08:00">
                 2020-04-21
               </time>
             
@@ -313,8 +313,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
                   </a>
                 </span>
 
@@ -351,21 +351,15 @@
 
       
         
-          <h3 id="13-ConcurrentLinkedQueue-（循环CAS）"><a href="#13-ConcurrentLinkedQueue-（循环CAS）" class="headerlink" title="13. ConcurrentLinkedQueue （循环CAS）"></a>13. ConcurrentLinkedQueue （循环CAS）</h3><h4 id="应用场景："><a href="#应用场景：" class="headerlink" title="应用场景："></a>应用场景：</h4><p>按照适用的并发强度从低到高排列如下：</p>
+          <h2 id="三、Yarn"><a href="#三、Yarn" class="headerlink" title="三、Yarn"></a>三、Yarn</h2><h4 id="1-下一代MapReduce框架的设计思想"><a href="#1-下一代MapReduce框架的设计思想" class="headerlink" title="1. 下一代MapReduce框架的设计思想"></a>1. 下一代MapReduce框架的设计思想</h4><p>Hadoop1.0的弊端：</p>
 <ul>
-<li>LinkedList/ArrayList  非线程安全，不能用于并发场景（List的方法支持栈和队列的操作，因此可以用List封装成stack和queue）；</li>
-<li>Collections.synchronizedList  使用wrapper class封装，每个方法都用synchronized(mutex:Object)做了同步</li>
-<li>LinkedBlockingQueue  采用了锁分离的设计，避免了读/写操作冲突，且自动负载均衡，可以有界。BlockingQueue在生产-消费模式下首选【Iterator安全，不保证数据一致性】</li>
-<li>ConcurrentLinkedQueue  适用于高并发读写操作，理论上有最高的吞吐量，无界，不保证数据访问实时一致性，Iterator不抛出并发修改异常，采用CAS机制实现无锁访问。</li>
+<li>Hadoop MapReduce在可扩展性、资源利用率和多框架支持等方面存在不足。</li>
+<li>Hadoop未能将资源调度与应用程序计算的功能分开，造成Hadoop难以支持多种框架。<br><img src="https://img-blog.csdnimg.cn/20200415233740409.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></li>
 </ul>
-<p>综上：</p>
-<ul>
-<li>在并发的场景下，如果并发强度较小，性能要求不苛刻，且锁可控的场景下，可使用Collections.synchronizedList，既保证了数据一致又保证了线程安全，性能够用；</li>
-<li>在大部分高并发场景下，建议使用 LinkedBlockingQueue ，性能与 ConcurrentLinkedQueue 接近，且能保证数据一致性；</li>
-<li>ConcurrentLinkedQueue 适用于超高并发的场景，但是需要针对数据不一致采取一些措施。
+<p>下一代MapReduce的设计思想：将JobTracker的两个主要功能：资源管理和作业控制拆分成两个独立的进程。其中资源管理进程（YARN）与具体应用程序无关，只负责资源的调度，而作业控制进程（ApplicationMaster）则是直接与应用程序相关的模块，每个作业控制进程只负责管理一个作业。<br><img src="https://img-blog.csdnimg.cn/20200415233724151.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%83%EF%BC%89ConcurrentLinkedQueue%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/#more" rel="contents">
+            <a class="btn" href="/2020/04/21/Yarn%E7%9A%84%E8%AE%BE%E8%AE%A1%E7%BB%84%E6%88%90%E4%B8%8E%E5%9F%BA%E6%9C%AC%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -416,7 +410,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89ReentrantLock%E4%B8%8EReentrantReadWriteLock%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/apReduce%E7%9A%84%E8%AF%A6%E7%BB%86%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="D. Wei">
@@ -435,7 +429,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89ReentrantLock%E4%B8%8EReentrantReadWriteLock%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/" itemprop="url">JUC知识点总结（三）ReentrantLock与ReentrantReadWriteLock源码解析</a></h1>
+                <a class="post-title-link" href="/2020/04/21/apReduce%E7%9A%84%E8%AF%A6%E7%BB%86%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/" itemprop="url">MapReduce的详细工作流程</a></h1>
         
 
         <div class="post-meta">
@@ -447,7 +441,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:54:24+08:00">
                 2020-04-21
               </time>
             
@@ -470,8 +464,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
                   </a>
                 </span>
 
@@ -508,25 +502,27 @@
 
       
         
-          <h3 id="8-Lock接口-（ReentrantLock-可重入锁）"><a href="#8-Lock接口-（ReentrantLock-可重入锁）" class="headerlink" title="8. Lock接口 （ReentrantLock 可重入锁）"></a>8. Lock接口 （ReentrantLock 可重入锁）</h3><h4 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h4><p>ReentantLock 继承接口 Lock 并实现了接口中定义的方法， 它是一种可重入锁， 除了能完成 synchronized 所能完成的所有工作外，还提供了诸如可响应中断锁、可轮询锁请求、定时锁等<br>避免多线程死锁的方法。 </p>
+          <h3 id="3-MapReduceTask工作流程"><a href="#3-MapReduceTask工作流程" class="headerlink" title="3. MapReduceTask工作流程"></a>3. MapReduceTask工作流程</h3><p>整理自Hadoop技术内幕</p>
+<h4 id="3-1-概述"><a href="#3-1-概述" class="headerlink" title="3.1 概述"></a>3.1 概述</h4><p>MapReduce框架中，一个Task被分为Map和Reduce两个阶段，每个MapTask处理数据集合中的一个split并将产生的数据溢写入本地磁盘；而每个ReduceTask远程通过HTTP以pull的方式拉取相应的中间数据文件，经过合并计算后将结果写入HDFS。</p>
+<h4 id="3-2-MapTask"><a href="#3-2-MapTask" class="headerlink" title="3.2 MapTask"></a>3.2 MapTask</h4><p><img src="https://img-blog.csdnimg.cn/20200410005649280.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
+<p>客户端提交任务，规划切片，并将切片文件，程序jar包与任务配置文件上传，Hadoop集群分配节点执行任务；</p>
 <ul>
-<li>尝试非阻塞地获取锁：tryLock()，调用方法后立刻返回；</li>
-<li>能被中断地获取锁：lockInterruptibly()：在锁的获取中可以中断当前线程</li>
-<li>超时获取锁：tryLock(time,unit)，超时返回</li>
-</ul>
-<h4 id="Condition-类和-Object-类锁方法区别区别"><a href="#Condition-类和-Object-类锁方法区别区别" class="headerlink" title="Condition 类和 Object 类锁方法区别区别"></a>Condition 类和 Object 类锁方法区别区别</h4><ol>
-<li>Condition 类的 awiat 方法和 Object 类的 wait 方法等效</li>
-<li>Condition 类的 signal 方法和 Object 类的 notify 方法等效</li>
-<li>Condition 类的 signalAll 方法和 Object 类的 notifyAll 方法等效</li>
-<li>ReentrantLock 类可以唤醒指定条件的线程，而 object 的唤醒是随机的</li>
-</ol>
-<h4 id="tryLock-和-lock-和-lockInterruptibly-的区别"><a href="#tryLock-和-lock-和-lockInterruptibly-的区别" class="headerlink" title="tryLock 和 lock 和 lockInterruptibly 的区别"></a>tryLock 和 lock 和 lockInterruptibly 的区别</h4><ol>
-<li>tryLock 能获得锁就返回 true，不能就立即返回 false， tryLock(long timeout, TimeUnit unit)，可以增加时间限制，如果超过该时间段还没获得锁，返回 false</li>
-<li>lock 能获得锁就返回 true，不能的话一直等待获得锁</li>
-<li>lock 和 lockInterruptibly，如果两个线程分别执行这两个方法，但此时中断这两个线程，<strong>lock 不会抛出异常，而 lockInterruptibly 会抛出异常。</strong>
+<li><p><strong>Read阶段</strong>：MapTask按InputFormat中定义的方法将数据读取如内存；</p>
+</li>
+<li><p><strong>Map阶段</strong>：将内存中的数据按map()函数定义的方法处理成K-V对的形式；</p>
+</li>
+<li><p><strong>Collect阶段</strong>：将K-V对的数据与索引向两个方向写入环形缓冲区（默认100M大小）；</p>
+<ul>
+<li><p>调用Partitioner.getPartition()获取记录的分区号，再将&lt;key,value,partition&gt;传给MapOutputBuffer.collect()做进一步处理；</p>
+</li>
+<li><p>MapOutputBuffer内部使用了一个缓冲区暂时存储用户输出数据。几种不同的缓冲区优劣：</p>
+<ul>
+<li>单向缓冲区：生产者像缓冲区中单向写，写满后一次性写磁盘。性能低，不能同时读写数据。</li>
+<li>双缓冲区：一个用于写入数据，一个用于溢写磁盘，交替读写。仍会存在读写等待问题。</li>
+<li>环形缓冲区：缓冲区使用率达到一定阈值后便开始溢写磁盘，同时生产者仍可以像不断增加的剩余空间中循环写入数据，读写并行。
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89ReentrantLock%E4%B8%8EReentrantReadWriteLock%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/#more" rel="contents">
+            <a class="btn" href="/2020/04/21/apReduce%E7%9A%84%E8%AF%A6%E7%BB%86%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -577,7 +573,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/apReduce%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E2%80%94%E2%80%94%E5%88%87%E7%89%87%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="D. Wei">
@@ -596,7 +592,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/" itemprop="url">JMM与volatile关键字</a></h1>
+                <a class="post-title-link" href="/2020/04/21/apReduce%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E2%80%94%E2%80%94%E5%88%87%E7%89%87%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/" itemprop="url">MapReduce中的数据输入——切片与数据处理</a></h1>
         
 
         <div class="post-meta">
@@ -608,7 +604,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:50:00+08:00">
                 2020-04-21
               </time>
             
@@ -631,8 +627,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
                   </a>
                 </span>
 
@@ -669,17 +665,17 @@
 
       
         
-          <h4 id="1-并发的两个关键问题：线程间通信和线程间同步"><a href="#1-并发的两个关键问题：线程间通信和线程间同步" class="headerlink" title="1. 并发的两个关键问题：线程间通信和线程间同步"></a>1. 并发的两个关键问题：线程间通信和线程间同步</h4><p>线程通信机制有两种：</p>
-<ul>
-<li><p>共享内存：隐式通信，显式同步；</p>
-</li>
-<li><p>消息传递：显式通信，隐式同步。（Java的并发采用的是共享内存模型。）</p>
-</li>
+          <h3 id="2-MapReduce中的数据输入"><a href="#2-MapReduce中的数据输入" class="headerlink" title="2. MapReduce中的数据输入"></a>2. MapReduce中的数据输入</h3><h4 id="2-1-文件切片"><a href="#2-1-文件切片" class="headerlink" title="2.1 文件切片"></a>2.1 文件切片</h4><h5 id="2-1-1-什么是切片"><a href="#2-1-1-什么是切片" class="headerlink" title="2.1.1 什么是切片"></a>2.1.1 什么是切片</h5><p>数据块（Block）：HDFS中数据保存的单位，HDFS在物理上将数据分为一个一个Block管理</p>
+<p>数据切片（Split）：在逻辑上对Map任务输入数据的切片。</p>
+<h5 id="2-1-2-为什么要切片"><a href="#2-1-2-为什么要切片" class="headerlink" title="2.1.2 为什么要切片"></a>2.1.2 为什么要切片</h5><p>将输入文件分为多片可以并行进行Map阶段的计算，提高Job的运行速度。一份数据切片就会有一个MapTask。</p>
+<h5 id="2-1-3-文件的切片机制"><a href="#2-1-3-文件的切片机制" class="headerlink" title="2.1.3 文件的切片机制"></a>2.1.3 文件的切片机制</h5><ul>
+<li>简单的按照文件的内容长度切片，切片大小默认为Block的大小（128M）,但每次切片完都会判断剩下的部分是否大于块的1.1倍，不大于1.1倍就归入上一个切片</li>
+<li>切片时不会考虑数据集整体，而是单独针对每一份文件切片（默认）</li>
 </ul>
-<h4 id="2-JAVA内存模型：JMM"><a href="#2-JAVA内存模型：JMM" class="headerlink" title="2. JAVA内存模型：JMM"></a>2. JAVA内存模型：JMM</h4><p>Java虚拟机规范试图定义一个Java内存模型(JMM)，以屏蔽所有类型的硬件和操作系统内存访问差异，让Java程序在不同的平台上能够达到一致的内存访问效果。简单地说，由于CPU执行指令的速度很快，但是内存访问速度很慢，于是在CPU里加了好几层高速缓存。在Java内存模型中，对上述优化进行了一波抽象。JMM规定所有的变量都在主内存中，类似于上面提到的普通内存，每个线程又包含自己的工作内存，为了便于理解可以看成CPU上的寄存器或者高速缓存。因此，线程的操作都是以工作内存为主，它们只能访问自己的工作内存，并且在工作之前和之后，该值被同步回主内存。JMM是一种抽象的概念，它定义了线程和主内存之间的关系：线程之间的共享变量存储在主内存中，每个线程都有一个私有本地内存，本地内存中存储了该线程读/写共享变量的副本。</p>
+<h4 id="2-2-任务提交流程"><a href="#2-2-任务提交流程" class="headerlink" title="2.2 任务提交流程"></a>2.2 任务提交流程</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//在客户端Driver中提交任务</span></span><br><span class="line">job.waitForCompletion()</span><br><span class="line">submit();</span><br><span class="line"><span class="comment">// 1建立连接</span></span><br><span class="line">	connect();	</span><br><span class="line">		<span class="comment">// 1）创建提交Job的代理</span></span><br><span class="line">		<span class="keyword">new</span> Cluster(getConfiguration());</span><br><span class="line">			<span class="comment">// （1）判断是本地yarn还是远程</span></span><br><span class="line">			initialize(jobTrackAddr, conf); </span><br><span class="line"><span class="comment">// 2 提交job</span></span><br><span class="line">submitter.submitJobInternal(Job.<span class="keyword">this</span>, cluster)</span><br><span class="line">	<span class="comment">// 1）创建给集群提交数据的Stag路径</span></span><br><span class="line">	Path jobStagingArea = JobSubmissionFiles.getStagingDir(cluster, conf);</span><br><span class="line">	<span class="comment">// 2）获取jobid ，并创建Job路径</span></span><br><span class="line">	JobID jobId = submitClient.getNewJobID();</span><br><span class="line">	<span class="comment">// 3）拷贝jar包到集群</span></span><br><span class="line">copyAndConfigureFiles(job, submitJobDir);	</span><br><span class="line">	rUploader.uploadFiles(job, jobSubmitDir);</span><br><span class="line"><span class="comment">// 4）计算切片，生成切片规划文件</span></span><br><span class="line">writeSplits(job, submitJobDir);</span><br><span class="line">		maps = writeNewSplits(job, jobSubmitDir);</span><br><span class="line">		input.getSplits(job);</span><br><span class="line">			<span class="keyword">long</span> minSize = Math.max(getFormatMinSplitSize(), getMinSplitSize(job));</span><br><span class="line">    		<span class="keyword">long</span> maxSize = getMaxSplitSize(job);</span><br><span class="line">			<span class="keyword">for</span> (FileStatus file: files) </span><br><span class="line">                <span class="keyword">long</span> splitSize = computeSplitSize(blockSize, minSize, maxSize);</span><br><span class="line">					<span class="comment">//blockSize与给定的最大值的最小值与给定的Split最小值取最大值</span></span><br><span class="line">					<span class="comment">//最小值默认为1，最大值默认为Long.MAX_VALUE</span></span><br><span class="line">					Math.max(minSize, Math.min(maxSize, blockSize));</span><br><span class="line"><span class="comment">// 5）向Stag路径写XML配置文件</span></span><br><span class="line">writeConf(conf, submitJobFile);</span><br><span class="line">	conf.writeXml(out);</span><br><span class="line"><span class="comment">// 6）提交Job,返回提交状态</span></span><br><span class="line">status = submitClient.submitJob(jobId, submitJobDir.toString(), job.getCredentials());</span><br></pre></td></tr></table></figure>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89JMM%E4%B8%8Evolatile%E5%85%B3%E9%94%AE%E5%AD%97/#more" rel="contents">
+            <a class="btn" href="/2020/04/21/apReduce%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E2%80%94%E2%80%94%E5%88%87%E7%89%87%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%A4%84%E7%90%86/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -730,7 +726,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B9%9D%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%9D%A2%E8%AF%95%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E8%AF%BB%E5%86%99%E6%95%B0%E6%8D%AE%E6%B5%81/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="D. Wei">
@@ -749,7 +745,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B9%9D%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%9D%A2%E8%AF%95%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/" itemprop="url">JUC知识点总结（九）JAVA线程池</a></h1>
+                <a class="post-title-link" href="/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E8%AF%BB%E5%86%99%E6%95%B0%E6%8D%AE%E6%B5%81/" itemprop="url">Hadoop文件系统——HDFS读写数据流</a></h1>
         
 
         <div class="post-meta">
@@ -761,7 +757,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:49:12+08:00">
                 2020-04-21
               </time>
             
@@ -784,8 +780,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
                   </a>
                 </span>
 
@@ -822,768 +818,529 @@
 
       
         
-          <h3 id="15-线程池"><a href="#15-线程池" class="headerlink" title="15. 线程池"></a>15. 线程池</h3><h4 id="15-1-为什么要使用线程池？"><a href="#15-1-为什么要使用线程池？" class="headerlink" title="15.1 为什么要使用线程池？"></a>15.1 为什么要使用线程池？</h4><ul>
-<li><p><strong>降低资源消耗</strong>：通过重复利用已创建的线程降低线程创建和销毁造成的消耗</p>
-</li>
-<li><p><strong>提高响应速度</strong>：任务到达时，任务可以不需要等到线程创建就能立即执行</p>
-</li>
-<li><p><strong>提高线程的可管理性</strong></p>
-</li>
-</ul>
-<h4 id="15-2-线程池的体系结构："><a href="#15-2-线程池的体系结构：" class="headerlink" title="15.2 线程池的体系结构："></a>15.2 线程池的体系结构：</h4><p>   java.util.concurrent.Executor : 负责线程的使用与调度的根接口</p>
-<ul>
-<li>ExecutorService 子接口: 线程池的主要接口</li>
-<li>ThreadPoolExecutor 线程池的实现类<ul>
-<li>ScheduledExecutorService 子接口：负责线程的调度<ul>
-<li>ScheduledThreadPoolExecutor ：继承 ThreadPoolExecutor，实现 ScheduledExecutorService
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B9%9D%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%9D%A2%E8%AF%95%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="D. Wei">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="藤井树不是树">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/" itemprop="url">JAVA虚拟机浅析</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
-                2020-04-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
           
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JVM/" itemprop="url" rel="index">
-                    <span itemprop="name">JVM</span>
-                  </a>
-                </span>
+            <h3 id="2-HDFS数据流"><a href="#2-HDFS数据流" class="headerlink" title="2. HDFS数据流"></a>2. HDFS数据流</h3><h4 id="2-1-文件读取流程剖析（重要）"><a href="#2-1-文件读取流程剖析（重要）" class="headerlink" title="2.1 文件读取流程剖析（重要）"></a>2.1 文件读取流程剖析（重要）</h4><p><img src="https://img-blog.csdnimg.cn/20200408011130912.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">getFileFromHDFS</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException, URISyntaxException </span>&#123;</span><br><span class="line">        <span class="comment">// 1 获取文件系统</span></span><br><span class="line">        Configuration configuration = <span class="keyword">new</span> Configuration();</span><br><span class="line">        FileSystem fs = FileSystem.get(<span class="keyword">new</span> URI(<span class="string">"hdfs://hadoop001:9000"</span>), configuration, <span class="string">"root"</span>);</span><br><span class="line">        <span class="comment">// 2 获取输入流</span></span><br><span class="line">        FSDataInputStream fis = fs.open(<span class="keyword">new</span> Path(<span class="string">"/in.txt"</span>));</span><br><span class="line">        <span class="comment">// 3 获取输出流</span></span><br><span class="line">        FileOutputStream fos = <span class="keyword">new</span> FileOutputStream(<span class="keyword">new</span> File(<span class="string">"in.txt"</span>));</span><br><span class="line">        <span class="comment">// 4 流的对拷</span></span><br><span class="line">        IOUtils.copyBytes(fis, fos, configuration);</span><br><span class="line">        <span class="comment">// 5 关闭资源</span></span><br><span class="line">        IOUtils.closeStream(fos);</span><br><span class="line">        IOUtils.closeStream(fis);</span><br><span class="line">        fs.close();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
 
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="JAVA虚拟机浅析"><a href="#JAVA虚拟机浅析" class="headerlink" title="JAVA虚拟机浅析"></a>JAVA虚拟机浅析</h2><h5 id="1-JAVA内存区域与内存管理"><a href="#1-JAVA内存区域与内存管理" class="headerlink" title="1.  JAVA内存区域与内存管理"></a>1.  JAVA内存区域与内存管理</h5><img src="C:\Users\weitu\AppData\Roaming\Typora\typora-user-images\1583499543544.png" alt="1583499543544" style="zoom:55%;" />
-
-<blockquote>
-<p>  JVM 内存分哪几个区，每个区的作用是什么?  </p>
-</blockquote>
-<p>运行时数据区：</p>
-<ul>
-<li><p>程序计数器</p>
-<ul>
-<li>当前线程所执行字节码的行号指示器；</li>
-<li>空间线程私有，各线程有自己独立的程序计数器，互不干扰；</li>
-<li>执行Java方法时，计数器记录正在执行的字节码地址，执行本地方法时，计数器值为空（Undefined）,该区域不存在OOM。</li>
-</ul>
-</li>
-<li><p>Java虚拟机栈</p>
-<ul>
-<li><p>栈帧存储局部变量（基本数据类型、引用类型和returnAdderss类型【指向一条字节码指令的地址】）、操作数栈、动态链接、方法出口信息；</p>
-</li>
-<li><p>空间线程私有，各线程有自己独立的栈帧，每个线程栈的大小 -Xss  设置；</p>
-</li>
-<li><p>线程请求的栈深度大于虚拟机所允许的深度：SOE（StackOverFlow Exception）；</p>
-<p>虚拟机栈动态扩展时无法申请到足够的内存：OOM（OutOfMemoryError）。</p>
-</li>
-</ul>
-</li>
-<li><p>本地方法栈</p>
-<ul>
-<li>为虚拟机存储的Native方法服务。线程私有，（OOM，SOE也都存在）。</li>
-</ul>
-</li>
-<li><p>Java堆</p>
-<ul>
-<li>存放对象实例，大小（-Xms，-Xmx）设置，OOM，线程共享</li>
-<li>新生代【伊甸区Eden，幸存区（Survivorfrom,Survivorto）】+老年代</li>
-</ul>
-</li>
-<li><p>方法区（永久代/元空间）</p>
-<ul>
-<li><p>已被虚拟机加载的类信息、常量、静态变量</p>
-</li>
-<li><p>运行时常量池：（方法区的一部分）</p>
-<ul>
-<li><p>Byte,Short,Integer,Long,Character,Boolean种包装类默认创建了数值[-128，127]的相应类型的缓存数据，但是超出此范围仍然会去创建新的对象。 </p>
-</li>
-<li><p>String类型通过new创建会分配在堆中，通过“ ”创建分配在常量池中；</p>
-<p>由只包含“ ”创建的String和+组成的String会被存放在常量池中；</p>
-<p>String的intern()方法会查找常量池中是否存在一份equal相等的字符串，如果有则返回引用，如果没有则将自己添加如常量池</p>
-<blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">String s1 = <span class="keyword">new</span> String(<span class="string">"xyz"</span>); <span class="comment">//创建了几个对象？</span></span><br></pre></td></tr></table></figure>
-</blockquote>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-<blockquote>
-<p>“xyz”在类加载时已经创建于常量池，运行时将常量池的对象复制一份到堆中，引用交给s1持有。</p>
-</blockquote>
-<ul>
-<li><p>直接内存（堆外内存）</p>
-<ul>
-<li>使用Native函数库直接使用本机内存，不受JVM限制，但也会存在OOM</li>
-</ul>
-</li>
-</ul>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AB%EF%BC%89CopyOnWrite%E6%9C%BA%E5%88%B6%E5%8F%8A%E5%85%B6%E5%9C%A8JAVA%E4%B8%AD%E7%9A%84%E5%AE%9E%E7%8E%B0/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="D. Wei">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="藤井树不是树">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AB%EF%BC%89CopyOnWrite%E6%9C%BA%E5%88%B6%E5%8F%8A%E5%85%B6%E5%9C%A8JAVA%E4%B8%AD%E7%9A%84%E5%AE%9E%E7%8E%B0/" itemprop="url">JUC知识点总结（八）CopyOnWrite机制</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
-                2020-04-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h3 id="14-CopyOnWrite"><a href="#14-CopyOnWrite" class="headerlink" title="14. CopyOnWrite"></a>14. CopyOnWrite</h3><p><strong>写时复制， 即在往集合中添加数据的时候，先拷贝一份存储的数组，然后添加元素到这份副本中，然后用副本去替换原先的数组。并发写入的时仍然通过synchronized加锁。</strong></p>
-<h4 id="14-1-特点："><a href="#14-1-特点：" class="headerlink" title="14.1 特点："></a>14.1 特点：</h4><ol>
-<li>相较于读写锁，写时复制在<strong>读取的时候可以写入的</strong> ，这样省去了读写之间的资源竞争；</li>
-<li><strong>无法保证实时一致性</strong>；</li>
-<li>每次添加都会进行复制，对性能的消耗有点大，适用于<strong>读多写少</strong>的场合；</li>
-</ol>
-<h4 id="14-2-JAVA中的实现"><a href="#14-2-JAVA中的实现" class="headerlink" title="14.2 JAVA中的实现"></a>14.2 JAVA中的实现</h4><p>java中提供了两个利用写时复制技术实现的线程安全集合：CopyOnWriteArrayList，CopyOnWriteArraySet。<strong>CopyOnWriteArraySet的底层实现是CopyOnWriteArrayList</strong>。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AB%EF%BC%89CopyOnWrite%E6%9C%BA%E5%88%B6%E5%8F%8A%E5%85%B6%E5%9C%A8JAVA%E4%B8%AD%E7%9A%84%E5%AE%9E%E7%8E%B0/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89Synchronized%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="D. Wei">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="藤井树不是树">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89Synchronized%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/" itemprop="url">JUC知识点总结（二）Synchronized底层原理总结</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
-                2020-04-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h4 id="7-synchronized关键字（重量级锁）"><a href="#7-synchronized关键字（重量级锁）" class="headerlink" title="7. synchronized关键字（重量级锁）"></a>7. synchronized关键字（重量级锁）</h4><ul>
-<li><p><strong>synchronized在JVM中的实现原理：</strong></p>
-<p>JVM基于<strong>进入和退出Monitor对象</strong>来实现<strong>方法同步</strong>和<strong>代码块同步</strong>，但两者的表现细节不同。<strong>本质是对一个对象的监视器（monitor）的获取，而这个获取过程是排他的，也就是同一时刻只能有一个线程获取到有synchronized所保护对象的监视器。</strong>任意一个对象都拥有自己的监视器。<strong>任意线程对对象的访问，首先要获得对象的监视器。如果获取失败，线程进入同步队列，线程状态变为BLOCKED。当访问对象的前驱（获得了锁的线程）释放了锁，则该释放操作唤醒阻塞在同步队列中的线程，使其重新尝试对监视器的获取。</strong></p>
-</li>
-</ul>
-<p>   <strong>synchronized关键字</strong>和<strong>synchronized方法</strong>的字节码略有不同，可以用<code>javap -v</code> 命令查看class文件对应的JVM字节码信息。</p>
-<p>  源码：</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89Synchronized%E5%BA%95%E5%B1%82%E5%8E%9F%E7%90%86%E6%80%BB%E7%BB%93/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%94%EF%BC%89%E7%94%9F%E4%BA%A7%E8%80%85%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%BC%8F%E7%9A%84%E4%B8%89%E7%A7%8D%E5%B8%B8%E8%A7%81%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="D. Wei">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="藤井树不是树">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%94%EF%BC%89%E7%94%9F%E4%BA%A7%E8%80%85%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%BC%8F%E7%9A%84%E4%B8%89%E7%A7%8D%E5%B8%B8%E8%A7%81%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95/" itemprop="url">JUC知识点总结（五）生产者消费者模式的三种常见实现方法</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Posted on</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
-                2020-04-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">In</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h3 id="11-生产者-消费者模式"><a href="#11-生产者-消费者模式" class="headerlink" title="11. 生产者\消费者模式"></a>11. 生产者\消费者模式</h3><h4 id="Object中的-wait-notify"><a href="#Object中的-wait-notify" class="headerlink" title="Object中的 wait()/notify()"></a>Object中的 wait()/notify()</h4><p>要点：判断条件时一定要用while()循环（虚假唤醒）</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Shop</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">produce</span><span class="params">()</span></span>&#123;</span><br><span class="line">        count++;</span><br><span class="line">        System.out.println(Thread.currentThread().getName()+<span class="string">" produce product , remain: "</span>+count+<span class="string">"!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sell</span><span class="params">()</span></span>&#123;</span><br><span class="line">        count--;</span><br><span class="line">        System.out.println(Thread.currentThread().getName()+<span class="string">" sell product , remain: "</span>+count+<span class="string">"!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Shop shop = <span class="keyword">new</span> Shop();</span><br><span class="line">        Factory f1 =shop.<span class="keyword">new</span> Factory(shop);</span><br><span class="line">        Factory f2 = shop.<span class="keyword">new</span> Factory(shop);</span><br><span class="line">        Consumer c1 =shop.<span class="keyword">new</span> Consumer(shop);</span><br><span class="line">        Consumer c2 = shop.<span class="keyword">new</span> Consumer(shop);</span><br><span class="line">        f1.start();</span><br><span class="line">        f2.start();</span><br><span class="line">        c1.start();</span><br><span class="line">        c2.start();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Factory</span> <span class="keyword">extends</span> <span class="title">Thread</span></span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Shop shop;</span><br><span class="line">        Factory(Shop shop)&#123;</span><br><span class="line">            <span class="keyword">this</span>.shop=shop;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (shop) &#123;</span><br><span class="line">                    <span class="keyword">while</span> (shop.count &gt;= <span class="number">10</span>) &#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            shop.wait();</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                            e.printStackTrace();</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    shop.produce();</span><br><span class="line">                    shop.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Consumer</span> <span class="keyword">extends</span> <span class="title">Thread</span></span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Shop shop;</span><br><span class="line">        Consumer(Shop shop)&#123;</span><br><span class="line">            <span class="keyword">this</span>.shop=shop;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (shop) &#123;</span><br><span class="line">                    <span class="keyword">while</span> (shop.count &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            shop.wait();</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                            e.printStackTrace();</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    shop.sell();</span><br><span class="line">                    shop.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h4 id="ReentryLock，Condition实现"><a href="#ReentryLock，Condition实现" class="headerlink" title="ReentryLock，Condition实现"></a>ReentryLock，Condition实现</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Shop</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> Lock lock = <span class="keyword">new</span> ReentrantLock();</span><br><span class="line">    <span class="keyword">private</span> Condition empty = lock.newCondition();</span><br><span class="line">    <span class="keyword">private</span> Condition full = lock.newCondition();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">produce</span><span class="params">()</span></span>&#123;</span><br><span class="line">        count++;</span><br><span class="line">        System.out.println(Thread.currentThread().getName()+<span class="string">" produce product , remain: "</span>+count+<span class="string">"!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sell</span><span class="params">()</span></span>&#123;</span><br><span class="line">        count--;</span><br><span class="line">        System.out.println(Thread.currentThread().getName()+<span class="string">" sell product , remain: "</span>+count+<span class="string">"!"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Shop shop = <span class="keyword">new</span> Shop();</span><br><span class="line">        Factory f1 =shop.<span class="keyword">new</span> Factory(shop);</span><br><span class="line">        Factory f2 = shop.<span class="keyword">new</span> Factory(shop);</span><br><span class="line">        Consumer c1 =shop.<span class="keyword">new</span> Consumer(shop);</span><br><span class="line">        Consumer c2 = shop.<span class="keyword">new</span> Consumer(shop);</span><br><span class="line">        f1.start();</span><br><span class="line">        f2.start();</span><br><span class="line">        c1.start();</span><br><span class="line">        c2.start();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Factory</span> <span class="keyword">extends</span> <span class="title">Thread</span></span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Shop shop;</span><br><span class="line">        Factory(Shop shop)&#123;</span><br><span class="line">            <span class="keyword">this</span>.shop=shop;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">100</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                lock.lock();</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">while</span> (shop.count &gt;= <span class="number">10</span>) &#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            full.await();</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                            e.printStackTrace();</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    shop.produce();</span><br><span class="line">                    empty.signal();</span><br><span class="line">                &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                    lock.unlock();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Consumer</span> <span class="keyword">extends</span> <span class="title">Thread</span></span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Shop shop;</span><br><span class="line">        Consumer(Shop shop)&#123;</span><br><span class="line">            <span class="keyword">this</span>.shop=shop;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">            <span class="keyword">while</span>(<span class="keyword">true</span>)&#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    Thread.sleep(<span class="number">150</span>);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    e.printStackTrace();</span><br><span class="line">                &#125;</span><br><span class="line">                lock.lock();</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">while</span> (shop.count &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                        <span class="keyword">try</span> &#123;</span><br><span class="line">                            empty.await();</span><br><span class="line">                        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                            e.printStackTrace();</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                    shop.sell();</span><br><span class="line">                    full.signal();</span><br><span class="line">                &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                    lock.unlock();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h4 id="阻塞队列实现"><a href="#阻塞队列实现" class="headerlink" title="阻塞队列实现"></a>阻塞队列实现</h4><p>BlockingQueue即阻塞队列，从阻塞这个词可以看出，在某些情况下对阻塞队列的访问可能会造成阻塞。被阻塞的情况主要有如下两种:</p>
 <ol>
-<li>当阻塞队列为空时，从阻塞队列中取数据的操作会被阻塞。</li>
-<li>当阻塞队列为满时，往阻塞队列中添加数据的操作会被阻塞。</li>
+<li><p><strong>客户端实例化一个FileSystem对象</strong>（其实就是HDFS的DistributedFileSystem实例，DistributedFileSystem继承于FileSystem），调用<strong>DistributedFileSystem.open()方法通过RPC向NameNode请求下载文件</strong>，<strong>NameNode通过查询元数据</strong>，找到<strong>文件开头部分块（第一个块）所有副本所在的DataNode地址</strong>并传给客户端，并且<strong>每个块的副本都基于距离远近排序</strong>。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> FSDataInputStream <span class="title">open</span><span class="params">(Path f, <span class="keyword">final</span> <span class="keyword">int</span> bufferSize)</span></span></span><br><span class="line"><span class="function">     <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">   statistics.incrementReadOps(<span class="number">1</span>);</span><br><span class="line">   Path absF = fixRelativePart(f);</span><br><span class="line">   <span class="keyword">return</span> <span class="keyword">new</span> FileSystemLinkResolver&lt;FSDataInputStream&gt;() &#123;</span><br><span class="line">     <span class="meta">@Override</span></span><br><span class="line">     <span class="function"><span class="keyword">public</span> FSDataInputStream <span class="title">doCall</span><span class="params">(<span class="keyword">final</span> Path p)</span></span></span><br><span class="line"><span class="function">         <span class="keyword">throws</span> IOException, UnresolvedLinkException </span>&#123;</span><br><span class="line">       <span class="keyword">final</span> DFSInputStream dfsis =</span><br><span class="line">         dfs.open(getPathName(p), bufferSize, verifyChecksum);</span><br><span class="line">       <span class="keyword">return</span> dfs.createWrappedInputStream(dfsis);</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="meta">@Override</span></span><br><span class="line">     <span class="function"><span class="keyword">public</span> FSDataInputStream <span class="title">next</span><span class="params">(<span class="keyword">final</span> FileSystem fs, <span class="keyword">final</span> Path p)</span></span></span><br><span class="line"><span class="function">         <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> fs.open(p, bufferSize);</span><br><span class="line">     &#125;</span><br><span class="line">   &#125;.resolve(<span class="keyword">this</span>, absF);</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>open()方法返回的是一个FSDataInputStream对象（支持文件定位的输入流）给客户端读取数据</strong>。这个FSDataInputStream其实是一个被包装的DFSInputStream对象。</p>
+</li>
+<li><p>客户端调用这个<strong>输入流的read()方法</strong>。文件开头部分的块的数据节点地址的DFSInputStream随即与这些块最近的数据节点相连接，<strong>数据从数据节点返回客户端</strong>（以Packet为单位来做校验，先在本地缓存，默认buffer为4096位，然后写入目标文件）。当到达块的末端时，DFSInputStream会关闭与数据节点之间的联系，然后为下一个块找到最佳的数据节点。客户端只需要读取一个连续的流，这些对于客户端都是透明的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Copies from one stream to another.</span></span><br><span class="line"><span class="comment">   * </span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> in InputStrem to read from</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> out OutputStream to write to</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> buffSize the size of the buffer </span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">copyBytes</span><span class="params">(InputStream in, OutputStream out, <span class="keyword">int</span> buffSize)</span> </span></span><br><span class="line"><span class="function">    <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">    PrintStream ps = out <span class="keyword">instanceof</span> PrintStream ? (PrintStream)out : <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">byte</span> buf[] = <span class="keyword">new</span> <span class="keyword">byte</span>[buffSize];</span><br><span class="line">    <span class="keyword">int</span> bytesRead = in.read(buf);</span><br><span class="line">    <span class="keyword">while</span> (bytesRead &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">      out.write(buf, <span class="number">0</span>, bytesRead);</span><br><span class="line">      <span class="keyword">if</span> ((ps != <span class="keyword">null</span>) &amp;&amp; ps.checkError()) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IOException(<span class="string">"Unable to write to output stream."</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      bytesRead = in.read(buf);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>客户端从流中读取数据时，块是按DFSInputStream打开与数据节点的新连接的顺序读取的。它也会调用NameNode检索下一组需要的块的位置。一旦完成读取，就会对FSDataInputStream调用close()。</p>
+</li>
 </ol>
-<p>从上可知，阻塞队列是线程安全的。 </p>
-<p>JDK中的七大阻塞队列</p>
-<table>
-<thead>
-<tr>
-<th align="center">阻塞队列名称</th>
-<th align="center">说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">ArrayBlockingQueue</td>
-<td align="center">一个由数组结构组成的有界阻塞队列。</td>
-</tr>
-<tr>
-<td align="center">LinkedBlockingQueue</td>
-<td align="center">一个由链表结构组成的有界阻塞队列。</td>
-</tr>
-<tr>
-<td align="center">PriorityBlockingQueue</td>
-<td align="center">一个支持优先级排序的无界阻塞队列。</td>
-</tr>
-<tr>
-<td align="center">DelayQueue</td>
-<td align="center">一个使用优先级队列实现的无界阻塞队列。</td>
-</tr>
-<tr>
-<td align="center">SynchronousQueue</td>
-<td align="center">一个不存储元素的阻塞队列。</td>
-</tr>
-<tr>
-<td align="center">LinkedTransferQueue</td>
-<td align="center">一个由链表结构组成的无界阻塞队列。</td>
-</tr>
-<tr>
-<td align="center">LinkedBlockingDeque</td>
-<td align="center">一个由链表结构组成的双向阻塞队列。</td>
-</tr>
-</tbody></table>
-<p><strong>ArrayBlockingQueue:</strong><br>基于数组的阻塞队列实现，其内部维护一个定长的数组，用于存储队列元素。线程阻塞的实现是通过ReentrantLock来完成的，数据的插入与取出共用同一个锁，因此ArrayBlockingQueue并不能实现生产、消费同时进行。而且在创建ArrayBlockingQueue时，我们还可以控制对象的内部锁是否采用公平锁，默认采用非公平锁。</p>
-<p><strong>LinkedBlockingQueue:</strong><br> 基于单向链表的阻塞队列实现，在初始化LinkedBlockingQueue的时候可以指定对立的大小，也可以不指定，默认类似一个无限大小的容量（Integer.MAX_VALUE），不指队列容量大小也是会有风险的，一旦数据生产速度大于消费速度，系统内存将有可能被消耗殆尽，因此要谨慎操作。另外LinkedBlockingQueue中用于阻塞生产者、消费者的锁是两个（锁分离），因此生产与消费是可以同时进行的。</p>
-<p><strong>BlockingQueue接口的一些方法:</strong></p>
-<table>
-<thead>
-<tr>
-<th align="left">操作</th>
-<th align="left">抛异常</th>
-<th align="left">特定值</th>
-<th align="left">阻塞</th>
-<th align="left">超时</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="left">插入</td>
-<td align="left">add(o)</td>
-<td align="left">offer(o)</td>
-<td align="left">put(o)</td>
-<td align="left">offer(o, timeout, timeunit)</td>
-</tr>
-<tr>
-<td align="left">移除</td>
-<td align="left">remove(o)</td>
-<td align="left">poll(o)</td>
-<td align="left">take(o)</td>
-<td align="left">poll(timeout, timeunit)</td>
-</tr>
-<tr>
-<td align="left">检查</td>
-<td align="left">element(o)</td>
-<td align="left">peek(o)</td>
-<td align="left"></td>
-<td align="left"></td>
-</tr>
-</tbody></table>
-<p>这四类方法分别对应的是：<br>1 . ThrowsException：如果操作不能马上进行，则抛出异常<br>2 . SpecialValue：如果操作不能马上进行，将会返回一个特殊的值，一般是true或者false<br>3 . Blocks:如果操作不能马上进行，操作会被阻塞<br>4 . TimesOut:如果操作不能马上进行，操作会被阻塞指定的时间，如果指定时间没执行，则返回一个特殊值，一般是true或者false</p>
-<p><strong>代码实现：</strong></p>
+<h4 id="2-2-文件写入流程剖析（重要）"><a href="#2-2-文件写入流程剖析（重要）" class="headerlink" title="2.2 文件写入流程剖析（重要）"></a>2.2 文件写入流程剖析（重要）</h4><p><img src="https://img-blog.csdnimg.cn/20200408011152324.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">putFileToHDFS</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException, URISyntaxException </span>&#123;</span><br><span class="line">	<span class="comment">// 1 获取文件系统</span></span><br><span class="line">	Configuration configuration = <span class="keyword">new</span> Configuration();</span><br><span class="line">	FileSystem fs = FileSystem.get(<span class="keyword">new</span> URI(<span class="string">"hdfs://hadoop001:9000"</span>), configuration, <span class="string">"root"</span>);</span><br><span class="line">	<span class="comment">// 2 创建输入流</span></span><br><span class="line">	FileInputStream fis = <span class="keyword">new</span> FileInputStream(<span class="keyword">new</span> File(<span class="string">"in.txt"</span>));</span><br><span class="line">	<span class="comment">// 3 获取输出流</span></span><br><span class="line">	FSDataOutputStream fos = fs.create(<span class="keyword">new</span> Path(<span class="string">"/in.txt"</span>));</span><br><span class="line">	<span class="comment">// 4 流对拷</span></span><br><span class="line">	IOUtils.copyBytes(fis, fos, configuration);</span><br><span class="line">	<span class="comment">// 5 关闭资源</span></span><br><span class="line">	IOUtils.closeStream(fos);</span><br><span class="line">	IOUtils.closeStream(fis);</span><br><span class="line">    fs.close();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li><p>客户端通过<strong>DistributedFileSystem对象调用create()向NameNode请求上传文件</strong>，<strong>NameNode检查目标文件</strong>是否已存在，父目录是否存在，以及客户端是否有权限创建文件，如果检查通过NameNode就会生成一个新的文件记录<strong>“file.copying”</strong>，并<strong>返回一个文件系统输出流</strong>，否则会向客户端返回一个IOException异常。</p>
+</li>
+<li><p>客户端将所要上传的文件转换为输出流FSDataOutputStream；</p>
+</li>
+<li><p>当客户端开始写入文件的时候，<strong>客户端会将文件切分成多个 packets（ 默认64kB ）</strong>，并在<strong>内部以数据队列“data queue（数据队列）”的形式管理这些 packets</strong>，并<strong>向 namenode 申请 blocks</strong>，获取用来存储 replicas 的合适的 datanode 列表，<strong>列表的大小根据 namenode 中 replication 的设定而定，并按距离远近排序</strong>； </p>
+</li>
+<li><p>开始<strong>以 pipeline（管道）的形式将 packet 写入所有的 replicas 中</strong>。客户端把 packet 以流的方式写入第一个 datanode，该 datanode 把该 packet 存储之后，再将其传递给在此 pipeline 中的下一个 datanode，直到最后一个 datanode，这种<strong>写数据的方式呈流水线的形式</strong>；</p>
+<blockquote>
+<p> 客户端会根据返回的三个节点和第一个节点建立一个socket连接（只会和第一个节点建立），第一个节点又会和第二个节点建立socket连接，由第二个节点又会和第三个节点建立一个socket连接，这种连接的方式叫Pipeline </p>
+</blockquote>
+</li>
+<li><p>DataNode完成接收block块后，block的metadata（MD5校验码）通过一个心跳将信息汇报给NameNode </p>
+</li>
+<li><p><strong>最后一个 datanode 成功存储之后会返回一个ack packet（确认包）</strong>，在 pipeline 里传递至客户端，在客户端的开发库内部维护着<strong>“ack queue”</strong>，<strong>成功收到 datanode 返回的ack packet 后会从”data queue”移除相应的 packet；</strong></p>
+</li>
+<li><p>如果传输过程中，有<strong>某个 datanode 出现了故障，那么当前的 pipeline 会被关闭</strong>，<strong>出现故障的 datanode 会从当前的 pipeline 中移除，剩余的 block 会继续剩下的 datanode 中继续 以 pipeline 的形式传输</strong>，同时 <strong>namenode通过心跳检测机制会发现副本数不足，并分配一个新的datanode，保持replicas设定的数量</strong>；</p>
+</li>
+<li><p>客户端完成数据的写入后，会对数据流调用 close()方法，关闭数据流。并且NameNode若收到所有DataNode的汇报，NameNode会将元数据后的.copying去掉成为正式文件。</p>
+</li>
+</ol>
+<h4 id="2-3-副本节点的选择——机架感知"><a href="#2-3-副本节点的选择——机架感知" class="headerlink" title="2.3 副本节点的选择——机架感知"></a>2.3 副本节点的选择——机架感知</h4><p>第一个副本选择在Client所在节点上，或者随机选一个；<br>第二个副本选择在第一个副本同机架的任一节点；<br>第三个副本选择在同集群另一个机架中的任意节点。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E7%9A%84%E7%BB%84%E7%BB%87%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/04/21/adoop%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E2%80%94%E2%80%94HDFS%E7%9A%84%E7%BB%84%E7%BB%87%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1/" itemprop="url">Hadoop文件系统——HDFS的组织架构设计</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:48:27+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">Hadoop</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h2 id="一、Hadoop-Distributed-FileSystem（HDFS）"><a href="#一、Hadoop-Distributed-FileSystem（HDFS）" class="headerlink" title="一、Hadoop Distributed FileSystem（HDFS）"></a>一、Hadoop Distributed FileSystem（HDFS）</h2><h3 id="1-HDFS的设计"><a href="#1-HDFS的设计" class="headerlink" title="1. HDFS的设计"></a>1. HDFS的设计</h3><p>HDFS时为以<strong>流式数据访问模式</strong>存储<strong>超大文件</strong>而设计的文件系统，在商用硬件集群上运行。</p>
+<h4 id="1-1-文件块（Block）"><a href="#1-1-文件块（Block）" class="headerlink" title="1.1 文件块（Block）"></a>1.1 文件块（Block）</h4><p>HDFS以块为单位保存文件，在Hadoop2.x版本中块的大小默认为128M（在hadoop1.x中64M，通过dfs.blocksize规定）。一个小于块大小的文件不会占据整个块空间。</p>
+<h5 id="1-1-1-如何确定HDFS中块的大小？"><a href="#1-1-1-如何确定HDFS中块的大小？" class="headerlink" title="1.1.1 如何确定HDFS中块的大小？"></a>1.1.1 如何确定HDFS中块的大小？</h5><p><strong>HDFS中块比磁盘大，目的是减少寻址开销</strong>，从而传输一个由多个块组成的文件的时间就取决于磁盘的传输速率。<br><strong>如果块设计的太大，传输数据时间会增大；如果块设计的太小，会增加寻址时间。</strong></p>
+<p><strong>块大小的设计原则：寻址时间为传输时间的1%</strong></p>
+<p>目前磁盘的传输速率普遍为100MB/s，若希望寻址时间在10ms以内，那么传输时间为1s，Block大小为100MB，取2的整数次幂得到128MB。</p>
+<h5 id="1-1-2-采用块的好处"><a href="#1-1-2-采用块的好处" class="headerlink" title="1.1.2 采用块的好处"></a>1.1.2 采用块的好处</h5><ul>
+<li>减少了寻址时间，提高处理大文件的效率</li>
+<li>一个文件可以大于网络中任意一个磁盘的容量，不需要存储在同一块磁盘上</li>
+<li>简化存储管理（块的大小固定），元数据可以不与块一同储存。</li>
+<li>便于提高系统的容错和实用性，方便复制</li>
+</ul>
+<h4 id="1-2-NameNode，Secondary-NameNode-amp-DataNode"><a href="#1-2-NameNode，Secondary-NameNode-amp-DataNode" class="headerlink" title="1.2 NameNode，Secondary NameNode &amp; DataNode"></a>1.2 NameNode，Secondary NameNode &amp; DataNode</h4><p>HDFS集群有两种节点，以Master-Slave模式运行。</p>
+<h5 id="NameNode-amp-Secondary-NameNode"><a href="#NameNode-amp-Secondary-NameNode" class="headerlink" title="NameNode&amp;Secondary NameNode"></a>NameNode&amp;Secondary NameNode</h5><p><strong>NameNode作用：管理整个文件系统的命名空间；配置副本策略；管理Block的映射信息；处理客户端读写请求</strong><br><strong>SeconaryNameNode作用：复制NameNode，定期合并Fsimage，Edits；辅助恢复NameNode</strong></p>
+<blockquote>
+<p>NameNode中并不保留Block的位置信息，而是DataNode启动后定期汇报。</p>
+</blockquote>
+<p><strong>工作机制</strong>：</p>
+<ul>
+<li>第一阶段：NameNode启动<ul>
+<li>第一次启动NameNode格式化后，创建Fsimage和Edits文件。如果不是第一次启动，直接<strong>加载编辑日志和镜像文件到内存</strong>。</li>
+<li>客户端对元数据进行增删改的请求：<strong>NameNode先记录操作日志，更新滚动日志再内存中对数据进行增删改。</strong></li>
+</ul>
+</li>
+<li>第二阶段：Secondary NameNode工作<ul>
+<li>Secondary NameNode询问NameNode是否需要CheckPoint，返回NameNode是否检查结果。（         <strong>触发CheckPoint需要满足两个条件中的任意一个：1小时时间到和每隔一分种检查Edits中操作次数是否达到100万</strong>）  </li>
+<li>若需要CheckPoint则请求执行：<ul>
+<li>NameNode<strong>滚动正在写的Edits日志，生成一个空的edits.inprogress</strong>，将滚动前的编辑日志和镜像文件拷贝到Secondary NameNode；</li>
+<li>Secondary NameNode<strong>加载编辑日志和镜像文件到内存，并合并，生成新的镜像文件</strong>fsimage.chkpoint。</li>
+<li>拷贝fsimage.chkpoint到NameNode，NameNode将fsimage.chkpoint重新命名成fsimage。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>Secondary NameNode恢复NameNode的方法：</p>
+<ul>
+<li>直接拷贝</li>
+<li>使用<code>hdfs namenode -importCheckpoint</code>启动NameNode守护进程，从而将SecondaryNameNode中数据拷贝到NameNode目录中  </li>
+</ul>
+<p><strong>集群安全模式：</strong></p>
+<ul>
+<li>NameNode启动时，首先将镜像文件（Fsimage）载入内存，并执行编辑日志（Edits）中的各项操作。一旦在内存中成功建立文件系统元数据的映像，则创建一个新的Fsimage文件和一个空的编辑日志。此时，NameNode开始监听DataNode请求。<strong>这个过程期间，NameNode一直运行在安全模式，即NameNode的文件系统对于客户端来说是只读的。</strong></li>
+<li>系统中的<strong>数据块的位置并不是由NameNode维护的，而是以块列表的形式存储在DataNode中</strong>。在系统的正常操作期间，NameNode会在内存中保留所有块位置的映射信息。在安全模式下，各个DataNode会向NameNode发送最新的块列表信息，NameNode了解到足够多的块位置信息之后，即可高效运行文件系统。</li>
+<li>如果<strong>满足“最小副本条件”</strong>，<strong>NameNode会在30秒钟之后就退出安全模式</strong>。所谓的最小副本条件指的是在整个文件系统中99.9%的块满足最小副本级别（默认值：dfs.replication.min=1）。在<strong>启动一个刚刚格式化的HDFS集群时，因为系统中还没有任何块，所以NameNode不会进入安全模式</strong>。</li>
+</ul>
+<h5 id="DataNode："><a href="#DataNode：" class="headerlink" title="DataNode："></a>DataNode：</h5><p><strong>作用：储存实际数据块；执行读写操作</strong></p>
+<ul>
+<li>一个数据块在DataNode上以文件形式存储在磁盘上，包括两个文件，<strong>一个是数据本身，一个是元数据包括数据块的长度，块数据的校验和，以及时间戳。</strong>DataNode会<strong>周期性检验文件的校验和是否与创建时相同以保证文件的正确性；</strong></li>
+<li><strong>DataNode启动后向NameNode注册</strong>，通过后，<strong>周期性（1小时）的向NameNode上报所有的块信息</strong>。</li>
+<li><strong>心跳是每3秒一次</strong>，<strong>心跳返回结果带有NameNode给该DataNode的命令</strong>如复制块数据到另一台机器，或删除某个数据块。<strong>如果超过10分钟（默认超时时长10分钟+30秒）没有收到某个DataNode的心跳，则认为该节点不可用</strong>。</li>
+<li>集群运行中可以安全加入和退出一些机器。</li>
+</ul>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/%E7%BB%86%E8%A7%A3%E6%9E%90%EF%BC%9Amysql%E5%AE%9E%E7%8E%B0%E5%88%86%E7%BB%84%E6%9F%A5%E8%AF%A2%E6%AF%8F%E4%B8%AA%E7%8F%AD%E7%BA%A7%E7%9A%84%E5%89%8D%E4%B8%89%E5%90%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/04/21/%E7%BB%86%E8%A7%A3%E6%9E%90%EF%BC%9Amysql%E5%AE%9E%E7%8E%B0%E5%88%86%E7%BB%84%E6%9F%A5%E8%AF%A2%E6%AF%8F%E4%B8%AA%E7%8F%AD%E7%BA%A7%E7%9A%84%E5%89%8D%E4%B8%89%E5%90%8D/" itemprop="url">详细解析：mysql实现分组查询每个班级的前三名</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T23:47:28+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <h4 id="8-2-mysql实现分组查询每个班级的前三名"><a href="#8-2-mysql实现分组查询每个班级的前三名" class="headerlink" title="8.2 mysql实现分组查询每个班级的前三名"></a>8.2 mysql实现分组查询每个班级的前三名</h4><p><strong>先上答案</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> a.class,a.score <span class="keyword">from</span> student a </span><br><span class="line"><span class="keyword">where</span> </span><br><span class="line">(<span class="keyword">select</span> </span><br><span class="line"> <span class="keyword">count</span>(*) </span><br><span class="line"> <span class="keyword">from</span> </span><br><span class="line"> student </span><br><span class="line"> <span class="keyword">where</span> a.class=<span class="keyword">class</span> <span class="keyword">and</span> a.score&lt;score)</span><br><span class="line"> &lt;<span class="number">3</span></span><br><span class="line"><span class="keyword">order</span> <span class="keyword">by</span> </span><br><span class="line">a.class, a.score </span><br><span class="line"><span class="keyword">desc</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>解析：</strong></p>
+<p>对于上面的sql语句，将其拆分为两部分：</p>
+<p>主查询：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> a.class,a.score <span class="keyword">from</span> student a </span><br><span class="line"><span class="keyword">where</span> </span><br><span class="line">  condition</span><br><span class="line"><span class="keyword">order</span> <span class="keyword">by</span> a.class, a.score <span class="keyword">desc</span>;</span><br></pre></td></tr></table></figure>
+
+<p>主查询很好理解，对于a中的每一行，只要它满足condition条件，那就把它作为结果，排序输出。</p>
+<p>那么什么样的一样可以满足condition条件呢？</p>
+<p>子查询 condition：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(<span class="keyword">select</span> <span class="keyword">count</span>(*)  <span class="keyword">from</span>  student  <span class="keyword">where</span> a.class=<span class="keyword">class</span> <span class="keyword">and</span> a.score&lt;score) &lt;<span class="number">3</span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到，在子查询中，对于a中的每一行，记为传入行，都与student表中的每一行（记为内部行）进行一次比较，有两个条件：</p>
+<ul>
+<li>传入行和传出行类别相同；</li>
+<li>传入行的分数小于内部行的分数。</li>
+</ul>
+<p>当这两个条件满足，就说明这个表中这一条内部行的分数比传入行大。</p>
+<p>子查询的输出为count(*)，也就是要统计满足上述两个条件的行数的条目数。有N条满足，就说明这个表中有N条数据大于该传入行，也就是传入行的分数在这一类中排第N+1。</p>
+<p>那么再加一个限定条件&lt;3，也就是取前三名。</p>
+<p>这样结果就显然易见了。</p>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/Kafka%EF%BC%9A%E6%95%B4%E7%90%86%E7%9A%84%E4%B8%80%E4%BA%9B%E9%9D%A2%E8%AF%95%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/04/21/Kafka%EF%BC%9A%E6%95%B4%E7%90%86%E7%9A%84%E4%B8%80%E4%BA%9B%E9%9D%A2%E8%AF%95%E9%A2%98/" itemprop="url">Kafka知识点总结</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T22:56:08+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h4 id="1-Kafka-中的-ISR-InSyncRepli-、-OSR-OutSyncRepli-、-AR-AllRepli-代表什么？"><a href="#1-Kafka-中的-ISR-InSyncRepli-、-OSR-OutSyncRepli-、-AR-AllRepli-代表什么？" class="headerlink" title="1. Kafka 中的 ISR(InSyncRepli)、 OSR(OutSyncRepli)、 AR(AllRepli)代表什么？"></a>1. Kafka 中的 ISR(InSyncRepli)、 OSR(OutSyncRepli)、 AR(AllRepli)代表什么？</h4><p><strong>ISR</strong>：In-Sync Replicas 副本同步队列<br><strong>AR</strong>：Assigned Replicas 所有副本<br>ISR是由leader维护，follower从leader同步数据有一些延迟（包括延迟时间replica.lag.time.max.ms和延迟条数replica.lag.max.messages两个维度, 当前最新的版本0.10.x中只支持replica.lag.time.max.ms这个维度），任意一个超过阈值都会把follower剔除出ISR, 存入OSR（Outof-Sync Replicas）列表，新加入的follower也会先存放在OSR中。AR=ISR+OSR。</p>
+<h4 id="2-Kafka-中的-HW、-LEO-等分别代表什么？"><a href="#2-Kafka-中的-HW、-LEO-等分别代表什么？" class="headerlink" title="2.Kafka 中的 HW、 LEO 等分别代表什么？"></a>2.Kafka 中的 HW、 LEO 等分别代表什么？</h4><p><strong>LEO（Log End Offset）</strong>：每个副本的最后一个offset<br><strong>HW（High Watermark）</strong>：所有副本的最小LEO</p>
+<p>follower故障时：follower会被踢出isr，恢复后，follower读取本地磁盘记录的上次的HW，并将log文件高于HW的部分截取掉，从HW开始向leader进行同步，等follower的LEO大于等于该partition的HW后，就可以重新加入isr。</p>
+<p>leader故障时：leader 发生故障之后，会从 ISR 中选出一个新的 leader，之后，为保证多个副本之间的，  数据一致性， 其余的 follower 会先将各自的 log 文件高于 HW 的部分截掉，然后从新的 leader同步数据。  </p>
+<h4 id="3-Kafka-中是怎么体现消息顺序性的？"><a href="#3-Kafka-中是怎么体现消息顺序性的？" class="headerlink" title="3. Kafka 中是怎么体现消息顺序性的？"></a><strong>3. Kafka 中是怎么体现消息顺序性的？</strong></h4><p>kafka每个partition中的消息在写入时都是有序的，消费时，每个partition只能被每一个group中的一个消费者消费，保证了消费时也是有序的。<br>整个topic不保证有序。如果为了保证topic整个有序，那么将partition调整为1. </p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%94%EF%BC%89%E7%94%9F%E4%BA%A7%E8%80%85%E6%B6%88%E8%B4%B9%E8%80%85%E6%A8%A1%E5%BC%8F%E7%9A%84%E4%B8%89%E7%A7%8D%E5%B8%B8%E8%A7%81%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95/#more" rel="contents">
+            <a class="btn" href="/2020/04/21/Kafka%EF%BC%9A%E6%95%B4%E7%90%86%E7%9A%84%E4%B8%80%E4%BA%9B%E9%9D%A2%E8%AF%95%E9%A2%98/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -1634,7 +1391,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%8D%81%EF%BC%89ForkJoin%E6%A1%86%E6%9E%B6%E8%A7%A3%E6%9E%90/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/Kafka%E6%B6%88%E8%B4%B9%E8%80%85%EF%BC%9A%E5%88%86%E5%8C%BA%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%E5%8D%8F%E8%B0%83%E5%99%A8%E4%B8%8Eoffset/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="D. Wei">
@@ -1653,7 +1410,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%8D%81%EF%BC%89ForkJoin%E6%A1%86%E6%9E%B6%E8%A7%A3%E6%9E%90/" itemprop="url">JUC知识点总结（十）ForkJoin框架</a></h1>
+                <a class="post-title-link" href="/2020/04/21/Kafka%E6%B6%88%E8%B4%B9%E8%80%85%EF%BC%9A%E5%88%86%E5%8C%BA%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%E5%8D%8F%E8%B0%83%E5%99%A8%E4%B8%8Eoffset/" itemprop="url">Kafka消费者：分区分配策略、协调器、offset</a></h1>
         
 
         <div class="post-meta">
@@ -1665,7 +1422,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T22:56:07+08:00">
                 2020-04-21
               </time>
             
@@ -1688,8 +1445,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
                   </a>
                 </span>
 
@@ -1726,19 +1483,12 @@
 
       
         
-          <h3 id="16-fork-join"><a href="#16-fork-join" class="headerlink" title="16. fork/join"></a>16. fork/join</h3><p>Fork/Join框架是Java 7提供的一个用于并行执行任务的框架，是一个把大任务分割成若干个小任务，最终汇总每个小任务结果后得到大任务结果的框架。  </p>
-<h4 id="16-1work-stealing算法"><a href="#16-1work-stealing算法" class="headerlink" title="16.1work-stealing算法"></a>16.1work-stealing算法</h4><p>工作窃取（work-stealing）算法是指某个线程从其他队列里窃取任务来执行。对于一个比较大的任务，可以把这个任务分割为若干互不依赖的子任务，为了减少线程间的竞争，把这些子任务分别放到不同的队列里，并为每个<br>队列创建一个单独的线程来执行队列里的任务，线程和队列一一对应。当某些线程完成了自己的任务，就会而其他线程对应的队列里还有任务等待处理。这是它就会去其他线程的队列里窃取一个任务来执行。而在这时它们会访问同一个队列，所以为了减少窃取任务线程和被窃取任务线程之间的竞争，通常会<strong>使用双端队列</strong>，被<strong>窃取任务线程永远从双端队列的头部拿任务执行，而窃取任务的线程永远从双端队列的尾部拿任务执行</strong>。  </p>
-<h4 id="16-2Fork-Join框架的设计"><a href="#16-2Fork-Join框架的设计" class="headerlink" title="16.2Fork/Join框架的设计"></a>16.2Fork/Join框架的设计</h4><p>在Java的Fork/Join框架中，使用两个类完成上述操作</p>
-<ul>
-<li>ForkJoinTask：我们要使用Fork/Join框架，首先需要创建一个ForkJoinTask。该类提供了在任务中执行fork和join的机制。通常情况下我们不需要直接集成ForkJoinTask类，只需要继承它的子类，Fork/Join框架提供了两个子类：<ul>
-<li>RecursiveAction：用于没有返回结果的任务</li>
-<li>RecursiveTask:用于有返回结果的任务</li>
-</ul>
-</li>
-<li>ForkJoinPool：ForkJoinTask需要通过ForkJoinPool来执行
+          <h2 id="Kafka消费者：分区分配策略、协调器、offset"><a href="#Kafka消费者：分区分配策略、协调器、offset" class="headerlink" title="Kafka消费者：分区分配策略、协调器、offset"></a>Kafka消费者：分区分配策略、协调器、offset</h2><h3 id="1-消费方式-Push-vs-Pull"><a href="#1-消费方式-Push-vs-Pull" class="headerlink" title="1. 消费方式 Push vs Pull　　"></a>1. 消费方式 Push vs Pull　　</h3><p>作为一个消息系统，Kafka遵循了传统的方式，选择由Producer向broker push消息并由Consumer从broker pull消息。一些logging-centric system，比如Facebook的Scribe和Cloudera的Flume，采用push模式。事实上，push模式和pull模式各有优劣。 push模式很难适应消费速率不同的消费者，因为消息发送速率是由broker决定的。<strong>push模式的目标是尽可能以最快速度传递消息，但是这样很容易造成Consumer来不及处理消息，典型的表现就是拒绝服务以及网络拥塞。而pull模式则可以根据Consumer的消费能力以适当的速率消费消息</strong>。 对于Kafka而言，pull模式更合适。<strong>pull模式可简化broker的设计，Consumer可自主控制消费消息的速率，同时Consumer可以自己控制消费方式——即可批量消费也可逐条消费，同时还能选择不同的提交方式从而实现不同的传输语义</strong>。 <strong>pull模式的不足在于，如果Kafka没有数据，消费者可能会陷入循环中，一直返回空数据</strong>。</p>
+<h3 id="2-分区分配策略"><a href="#2-分区分配策略" class="headerlink" title="2. 分区分配策略"></a>2. 分区分配策略</h3><p>Kafka保证同一Consumer Group中只有一个Consumer会消费某条消息，实际上，Kafka保证的是稳定状态下每一个Consumer实例只会消费某一个或多个特定Partition的数据，而某个Partition的数据只会被某一个特定的Consumer实例所消费。也就是说Kafka对消息的分配是以Partition为单位分配的，而非以每一条消息作为分配单元。这样设计的劣势是无法保证同一个Consumer Group里的Consumer均匀消费数据，优势是每个Consumer不用都跟大量的Broker通信，减少通信开销，同时也降低了分配难度，实现也更简单。另外，因为同一个Partition里的数据是有序的，这种设计可以保证每个Partition里的数据可以被有序消费。</p>
+<p>一个Consumer Group中的多个consumer是如何消费不同的partition？</p>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%8D%81%EF%BC%89ForkJoin%E6%A1%86%E6%9E%B6%E8%A7%A3%E6%9E%90/#more" rel="contents">
+            <a class="btn" href="/2020/04/21/Kafka%E6%B6%88%E8%B4%B9%E8%80%85%EF%BC%9A%E5%88%86%E5%8C%BA%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%E5%8D%8F%E8%B0%83%E5%99%A8%E4%B8%8Eoffset/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -1789,7 +1539,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/Kafka%E7%94%9F%E4%BA%A7%E8%80%85%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%8F%AF%E9%9D%A0%E6%80%A7%E7%AD%96%E7%95%A5%E4%B8%8E%E5%B9%82%E7%AD%89%E6%80%A7/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="D. Wei">
@@ -1808,7 +1558,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/" itemprop="url">JUC知识点总结（六）线程的生命周期</a></h1>
+                <a class="post-title-link" href="/2020/04/21/Kafka%E7%94%9F%E4%BA%A7%E8%80%85%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%8F%AF%E9%9D%A0%E6%80%A7%E7%AD%96%E7%95%A5%E4%B8%8E%E5%B9%82%E7%AD%89%E6%80%A7/" itemprop="url">Kafka生产者：数据可靠性策略与幂等性</a></h1>
         
 
         <div class="post-meta">
@@ -1820,7 +1570,7 @@
               
                 <span class="post-meta-item-text">Posted on</span>
               
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T16:56:05+08:00">
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T22:56:06+08:00">
                 2020-04-21
               </time>
             
@@ -1843,8 +1593,8 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/JUC/" itemprop="url" rel="index">
-                    <span itemprop="name">JUC</span>
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
                   </a>
                 </span>
 
@@ -1881,22 +1631,177 @@
 
       
         
-          <h3 id="10-线程的生命周期"><a href="#10-线程的生命周期" class="headerlink" title="10. 线程的生命周期"></a>10. 线程的生命周期</h3><p><img src="https://img-blog.csdnimg.cn/20200321205708544.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"></p>
-<ul>
-<li><p>新建，当程序使用new关键字创建了一个线程之后，该线程就处于新建状态，此时仅由JVM为其分配内存，并初始化其成员变量的值；</p>
-</li>
-<li><p>就绪，当线程对象调用了start()方法之后，该线程处于就绪状态。Java虚拟机会为其创建方法调用栈和程序计数器，等待调度运行；</p>
-</li>
-<li><p>运行，如果处于就绪状态的线程获得了CPU，开始执行run()方法的线程执行体，则该线程处于运行状态；</p>
-</li>
-<li><p>阻塞，在运行状态的时候，可能因为某些原因导致运行状态的线程变成了阻塞状态，比如sleep()、wait()之后线程就处于了阻塞状态，这个时候需要其他机制将处于阻塞状态的线程唤醒，比如调用notify或者notifyAll()方法。唤醒的线程不会立刻执行run方法，它们要再次等待CPU分配资源进入运行状态；</p>
-</li>
-<li><p>销毁：如果线程正常执行完毕后或线程被提前强制性的终止或出现异常导致结束，那么线程就要被销毁，释放资源。</p>
-</li>
+          <h2 id="Kafka生产者：数据可靠性策略与幂等性"><a href="#Kafka生产者：数据可靠性策略与幂等性" class="headerlink" title="Kafka生产者：数据可靠性策略与幂等性"></a>Kafka生产者：数据可靠性策略与幂等性</h2><h3 id="1-Kafka生产者发送消息的过程"><a href="#1-Kafka生产者发送消息的过程" class="headerlink" title="1. Kafka生产者发送消息的过程"></a>1. Kafka生产者发送消息的过程</h3><ul>
+<li><strong>Kafka 会将发送消息包装为 ProducerRecord 对象</strong>， ProducerRecord 对象包含了目标主题和要发送的内容，同时还可以指定键和分区。在发送 ProducerRecord 对象前，生产者会<strong>先把键和值对象序列化成字节数组</strong>，这样它们才能够在网络上传输。</li>
+<li>接下来，<strong>数据被传给分区器</strong>。如果之前已经在 ProducerRecord 对象里指定了分区，那么分区器就不会再做任何事情。如果没有指定分区 ，那么分区器会<strong>根据 ProducerRecord 对象的键来选择一个分区</strong>，紧接着，这条记录被<strong>添加到一个记录批次里，这个批次里的所有消息会被发送到相同的主题和分区上</strong>。有一个独立的线程负责把这些记录批次发送到相应的 broker 上。</li>
+<li><strong>服务器在收到这些消息时会返回一个响应</strong>。如果消息成功写入 Kafka，就<strong>返回一个 RecordMetaData 对象</strong>，它<strong>包含了主题和分区信息，以及记录在分区里的偏移量</strong>。如果写入失败，则会返回一个错误。生产者在收到错误之后会尝试重新发送消息，如果达到指定的重试次数后还没有成功，则直接抛出异常，不再重试。</li>
 </ul>
+<h3 id="2-分区策略"><a href="#2-分区策略" class="headerlink" title="2. 分区策略"></a>2. 分区策略</h3>
           <!--noindex-->
           <div class="post-button text-center">
-            <a class="btn" href="/2020/04/21/JUC%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/#more" rel="contents">
+            <a class="btn" href="/2020/04/21/Kafka%E7%94%9F%E4%BA%A7%E8%80%85%EF%BC%9A%E6%95%B0%E6%8D%AE%E5%8F%AF%E9%9D%A0%E6%80%A7%E7%AD%96%E7%95%A5%E4%B8%8E%E5%B9%82%E7%AD%89%E6%80%A7/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/21/Kafka%E7%9A%84%E7%AE%80%E4%BB%8B%E4%B8%8E%E6%9E%B6%E6%9E%84/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2020/04/21/Kafka%E7%9A%84%E7%AE%80%E4%BB%8B%E4%B8%8E%E6%9E%B6%E6%9E%84/" itemprop="url">Kafka简介与架构</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-21T22:56:05+08:00">
+                2020-04-21
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kafka/" itemprop="url" rel="index">
+                    <span itemprop="name">Kafka</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="一、Kafka简介与架构"><a href="#一、Kafka简介与架构" class="headerlink" title="一、Kafka简介与架构"></a>一、Kafka简介与架构</h2><h3 id="1-kafka定义"><a href="#1-kafka定义" class="headerlink" title="1. kafka定义"></a>1. kafka定义</h3><p>Kafka是一个基于发布订阅模式的分布式消息队列，它具有以下特点：</p>
+<ul>
+<li>支持消息的发布和订阅，类似于 RabbtMQ、ActiveMQ 等消息队列；</li>
+<li>支持数据离线和实时处理；</li>
+<li>能保证消息的可靠性投递；</li>
+<li>支持消息的持久化存储，并通过多副本分布式的存储方案来保证消息的容错，时间效率O(1)；</li>
+<li>高吞吐率，单 Broker 可以轻松处理数千个分区以及每秒百万级的消息量。</li>
+<li>支持在线水平扩展</li>
+</ul>
+<h3 id="2-消息队列的优点"><a href="#2-消息队列的优点" class="headerlink" title="2. 消息队列的优点"></a>2. 消息队列的优点</h3><ul>
+<li><strong>解耦：</strong>两边数据处理过程独立，可任意修改，只要遵从相同的接口约束</li>
+<li><strong>可恢复性：</strong>系统的一部分组件失效时，不会影响到整个系统。即使一个处理消息的进程挂掉，加入队列中的消息仍可在系统恢复后处理</li>
+<li><strong>缓冲：</strong>控制优化数据流经过系统的速度，解决生产消费速度不一致的问题</li>
+<li><strong>削峰平谷：</strong>访问量剧增的情况可以避免系统因超负荷的请求而崩溃</li>
+<li><strong>异步通信：</strong>提供了异步处理机制</li>
+</ul>
+<h3 id="3-Kafka与其他消息队列的对比"><a href="#3-Kafka与其他消息队列的对比" class="headerlink" title="3. Kafka与其他消息队列的对比"></a>3. Kafka与其他消息队列的对比</h3>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/2020/04/21/Kafka%E7%9A%84%E7%AE%80%E4%BB%8B%E4%B8%8E%E6%9E%B6%E6%9E%84/#more" rel="contents">
               Read more &raquo;
             </a>
           </div>
@@ -1938,7 +1843,7 @@
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/">&lt;i class&#x3D;&quot;fa fa-angle-left&quot;&gt;&lt;&#x2F;i&gt;</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">&lt;i class&#x3D;&quot;fa fa-angle-right&quot;&gt;&lt;&#x2F;i&gt;</a>
+    <a class="extend prev" rel="prev" href="/">&lt;i class&#x3D;&quot;fa fa-angle-left&quot;&gt;&lt;&#x2F;i&gt;</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><a class="extend next" rel="next" href="/page/3/">&lt;i class&#x3D;&quot;fa fa-angle-right&quot;&gt;&lt;&#x2F;i&gt;</a>
   </nav>
 
 
@@ -1984,7 +1889,7 @@
               
                 <a href="/archives/%7C%7Carchive">
               
-                  <span class="site-state-item-count">26</span>
+                  <span class="site-state-item-count">36</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -1995,7 +1900,7 @@
               
               <div class="site-state-item site-state-categories">
                 <a href="/categories/index.html">
-                  <span class="site-state-item-count">5</span>
+                  <span class="site-state-item-count">7</span>
                   <span class="site-state-item-name">categories</span>
                 </a>
               </div>
@@ -2006,7 +1911,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">30</span>
+                  <span class="site-state-item-count">47</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>

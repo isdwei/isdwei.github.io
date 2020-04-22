@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="MySQL,事务," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="1.2 MySQL的分层架构分层架构 连接层+服务层+查询执行引擎+存储引擎  连接层包含客户端与一些连接服务 : Connectors 服务层完成大多数核心服务，如SQL接口，缓存查询，SQL的分析优化，所有跨存储引擎的功能都在这一层实现 : Management Serveices &amp; Utilities, Connection Pool, SQL Interface, Parser,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL知识点总结（二）MySQL架构与事务详解">
+<meta property="og:url" content="http://yoursite.com/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89MySQL%E6%9E%B6%E6%9E%84%E4%B8%8E%E4%BA%8B%E5%8A%A1%E8%AF%A6%E8%A7%A3/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="1.2 MySQL的分层架构分层架构 连接层+服务层+查询执行引擎+存储引擎  连接层包含客户端与一些连接服务 : Connectors 服务层完成大多数核心服务，如SQL接口，缓存查询，SQL的分析优化，所有跨存储引擎的功能都在这一层实现 : Management Serveices &amp; Utilities, Connection Pool, SQL Interface, Parser,">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-22T14:39:00.000Z">
+<meta property="article:modified_time" content="2020-04-22T14:45:12.737Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="事务">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/22/ySQL知识点总结（二）MySQL架构与事务详解/"/>
+
+
+
+
+
+  <title>MySQL知识点总结（二）MySQL架构与事务详解 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89MySQL%E6%9E%B6%E6%9E%84%E4%B8%8E%E4%BA%8B%E5%8A%A1%E8%AF%A6%E8%A7%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MySQL知识点总结（二）MySQL架构与事务详解</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-22T22:39:00+08:00">
+                2020-04-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="1-2-MySQL的分层架构"><a href="#1-2-MySQL的分层架构" class="headerlink" title="1.2 MySQL的分层架构"></a>1.2 MySQL的分层架构</h4><p>分层架构 连接层+服务层+查询执行引擎+存储引擎</p>
+<ul>
+<li>连接层包含客户端与一些连接服务 : Connectors</li>
+<li>服务层完成大多数核心服务，如SQL接口，缓存查询，SQL的分析优化，所有跨存储引擎的功能都在这一层实现 : Management Serveices &amp; Utilities, Connection Pool, SQL Interface, Parser, Optimizer, Cache&amp;Buffer</li>
+<li>引擎层真正负责MySQL中数据的存储读取，服务层通过API与引擎层交互</li>
+<li>存储层将数据存储在文件系统中</li>
+</ul>
+<h4 id="1-3-事务基础"><a href="#1-3-事务基础" class="headerlink" title="1.3 事务基础"></a>1.3 事务基础</h4><p>一些术语：并发控制 读写锁 锁粒度  表锁 行锁</p>
+<h5 id="事务-ACID（原子性atomicity，一致性consistency，隔离性isolation，持久性durability）"><a href="#事务-ACID（原子性atomicity，一致性consistency，隔离性isolation，持久性durability）" class="headerlink" title="事务 ACID（原子性atomicity，一致性consistency，隔离性isolation，持久性durability）"></a>事务 ACID（原子性atomicity，一致性consistency，隔离性isolation，持久性durability）</h5><ul>
+<li>原子性：使用 undo log ，从而达到回滚</li>
+<li>持久性：使用 redo log，从而达到故障后恢复</li>
+<li>隔离性：使用锁以及MVCC,运用的优化思想有读写分离，读读并行，读写并行</li>
+<li>一致性：通过回滚，以及恢复，和在并发环境下的隔离做到一致性。</li>
+</ul>
+<h5 id="隔离级别与对幻读的理解"><a href="#隔离级别与对幻读的理解" class="headerlink" title="隔离级别与对幻读的理解"></a>隔离级别与对幻读的理解</h5><ul>
+<li><p>未提交读 Read Uncommitted，未提交也可见，很少使用，会造成脏读（Dirty Read）</p>
+</li>
+<li><p>提交读Read Committed，读取已提交的内容，会造成不可重复读（Nonrepeatable Read）</p>
+</li>
+<li><p>可重复读Repeatable Read，同一事务多次读取结果一致，MySQL默认，但会造成幻读（Phantom Read）</p>
+<blockquote>
+<p>幻读错误的理解：说幻读是 事务A 执行两次 select 操作得到不同的数据集，即 select 1 得到 10 条记录，select 2 得到 11 条记录。这其实并不是幻读，这是不可重复读的一种，只会在 R-U R-C 级别下出现，而在 MySQL 默认的 RR 隔离级别是不会出现的。 </p>
+</blockquote>
+<blockquote>
+<p>幻读，并不是说两次读取获取的结果集不同，幻读侧重的方面是某一次的 select 操作得到的结果所表征的数据状态无法支撑后续的业务操作。更为具体一些：select 某记录是否存在，不存在，准备插入此记录，但执行 insert 时发现此记录已存在，无法插入，此时就发生了幻读。 </p>
+</blockquote>
+</li>
+<li><p>可串行化Serializable，强制事务串行执行，解决了幻读问题，很少用</p>
+</li>
+</ul>
+<h5 id="对于幻读与不可重复读在原理上的解释"><a href="#对于幻读与不可重复读在原理上的解释" class="headerlink" title="对于幻读与不可重复读在原理上的解释"></a>对于幻读与不可重复读在原理上的解释</h5><p>Mysql提供了多版本读取能力，也就是说表中一份存储的数据行会有多个版本。这个版本对应的version就是transaction id。当行数据被某个transaction变更时，这个行会有个隐含的hidden column中记录了这个更新者的transaction id。旧的数据在被覆盖的同时，会存储到一个undolog的文件中，这个文件中就是保存着每一行的版本数据链表,沿着这个链表走我们可以走过这一行数据之前的版本变更。</p>
+<p><strong>可重复读:</strong></p>
+<p>当开始一个新的transaction，这个transaction会分配一个新的transactionid，此时在这个transaction内部如果我们执行一条普通的select语句，根据select语句的condition,我们会找到一些满足条件的行记录,先不着急返回:</p>
+<p>每个匹配的行记录，我们从hidden column中找到对应的最近一次执行更新操作的操作者transaction id，我们将这个id(也就是版本)和我们当前的transaction id进行比较，如果其大于执行语句所属的transaction的id，那么就需要去undolog文件中去寻找旧的版本，一直找到小于当前transaction id的版本的行记录作为快照数据返回。</p>
+<p>也就是说，即使在我们当前这个事务执行过程中，有其它事务执行插入了新的数据能够满足我们的查询条件，但因为这个数据的版本(transaction id)大于我们当前事务的id，说明这个事务应该在当前事务之后发生，我们是查询不到这个数据的。</p>
+<p><strong>幻读:</strong></p>
+<p>幻读的字面意思很简单，就是在事务内两次查询语句(注意是select …for…update语句,不是前面的普通查询语句&lt;consistent read&gt;)，读取到了不同的数据。</p>
+<p>比如在一个事务中，我们要查询满足condition: a&gt;5 and a&lt;10的记录，目前只有一条记录a=7，此时另一个事务向这个condition中插入了一条a=8的数据，那么在有版本号的情况下，我们用普通的查询是读不到这条数据的，但如果我们想要插入一条a=8的数据，则会报错，这就是幻读。</p>
+<p><strong>解决办法:</strong></p>
+<p>数据库解决这个问题的办法就是，对这个区间都加锁，不仅仅是已有的行记录，空的那些a的值[8,9]都会加上锁，也就是gap lock。这个时候我们当前的事务就达到了对这个区间独占的目的，其它的事务在我们处理过程中就无法插入新的数据了（阻塞）。</p>
+<p>MySQL将每个数据库（schema）保存为目录下的一个子目录。创建表时，会创建一个与表同名的<em>.frm</em>文件保存表的定义。</p>
+<h4 id="1-4-MyISAM与InnoDB"><a href="#1-4-MyISAM与InnoDB" class="headerlink" title="1.4 MyISAM与InnoDB"></a>1.4 MyISAM与InnoDB</h4><ul>
+<li><p>InnoDB存储引擎 ，间隙锁防止幻读， 元数据.frm ，数据文件 .ibd 所有表都保存在系统表空间文件 </p>
+</li>
+<li><p>MyISAM存储引擎，不支持事务和行锁，数据文件<em>.myd</em> 索引文件<em>.myi</em></p>
+<table>
+<thead>
+<tr>
+<th align="center"></th>
+<th align="center">MyISAM</th>
+<th align="center">InnoDB</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">主外键</td>
+<td align="center">不支持</td>
+<td align="center">支持</td>
+</tr>
+<tr>
+<td align="center">事务</td>
+<td align="center">不支持</td>
+<td align="center">支持</td>
+</tr>
+<tr>
+<td align="center">行表锁</td>
+<td align="center">表锁，不适合高并发</td>
+<td align="center">行锁，适合高并发</td>
+</tr>
+<tr>
+<td align="center">索引</td>
+<td align="center">不保存真实数据</td>
+<td align="center">索引、数据均保存</td>
+</tr>
+<tr>
+<td align="center">MVCC</td>
+<td align="center">不支持</td>
+<td align="center">支持</td>
+</tr>
+<tr>
+<td align="center">关注点</td>
+<td align="center">性能</td>
+<td align="center">事务</td>
+</tr>
+<tr>
+<td align="center">其他</td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+</li>
+<li><p>Percona Server存储引擎</p>
+</li>
+</ul>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/MySQL/" rel="tag"># MySQL</a>
+          
+            <a href="/tags/%E4%BA%8B%E5%8A%A1/" rel="tag"># 事务</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89%E7%B4%A2%E5%BC%95%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8B-Tree%E8%80%8C%E4%B8%8D%E6%98%AF%EF%BC%8C%E7%BA%BF%E6%80%A7%E6%95%B0%E6%8D%AEHash-AVL-B-Tree/" rel="next" title="MySQL知识点总结（三）索引为什么使用B+Tree而不是，线性数据Hash,AVL,B-Tree">
+                <i class="fa fa-chevron-left"></i> MySQL知识点总结（三）索引为什么使用B+Tree而不是，线性数据Hash,AVL,B-Tree
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/22/MySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E5%9B%9B%EF%BC%89MySQL%E6%80%A7%E8%83%BD%E5%88%86%E6%9E%90%EF%BC%8Cexplain%E4%B8%8E%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96/" rel="prev" title="MySQL知识点总结（四）MySQL性能分析，explain与索引优化">
+                MySQL知识点总结（四）MySQL性能分析，explain与索引优化 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">47</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-2-MySQL的分层架构"><span class="nav-number">1.</span> <span class="nav-text">1.2 MySQL的分层架构</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3-事务基础"><span class="nav-number">2.</span> <span class="nav-text">1.3 事务基础</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#事务-ACID（原子性atomicity，一致性consistency，隔离性isolation，持久性durability）"><span class="nav-number">2.1.</span> <span class="nav-text">事务 ACID（原子性atomicity，一致性consistency，隔离性isolation，持久性durability）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#隔离级别与对幻读的理解"><span class="nav-number">2.2.</span> <span class="nav-text">隔离级别与对幻读的理解</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#对于幻读与不可重复读在原理上的解释"><span class="nav-number">2.3.</span> <span class="nav-text">对于幻读与不可重复读在原理上的解释</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-4-MyISAM与InnoDB"><span class="nav-number">3.</span> <span class="nav-text">1.4 MyISAM与InnoDB</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

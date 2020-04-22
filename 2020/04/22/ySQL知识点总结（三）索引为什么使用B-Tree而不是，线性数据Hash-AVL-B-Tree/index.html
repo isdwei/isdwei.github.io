@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="索引,MySQL,B+Tree," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="2.  MySQL索引优化2.1 MySQL性能下降的原因索引失效，join太多，服务器调优及各个参数设置 2.2创建高性能的索引 什么是索引？ 索引是帮助MySQL高效获取数据的数据结构。索引是数据结构！  索引分类  单值索引  一个索引只包含单个列，如主键   唯一索引 索引列的值必须唯一，允许空值  复合索引   123456789101112#创建索引CREATE [UNIQUE] IN">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL知识点总结（三）索引为什么使用B+Tree而不是，线性数据Hash,AVL,B-Tree">
+<meta property="og:url" content="http://yoursite.com/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89%E7%B4%A2%E5%BC%95%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8B-Tree%E8%80%8C%E4%B8%8D%E6%98%AF%EF%BC%8C%E7%BA%BF%E6%80%A7%E6%95%B0%E6%8D%AEHash-AVL-B-Tree/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="2.  MySQL索引优化2.1 MySQL性能下降的原因索引失效，join太多，服务器调优及各个参数设置 2.2创建高性能的索引 什么是索引？ 索引是帮助MySQL高效获取数据的数据结构。索引是数据结构！  索引分类  单值索引  一个索引只包含单个列，如主键   唯一索引 索引列的值必须唯一，允许空值  复合索引   123456789101112#创建索引CREATE [UNIQUE] IN">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-22T14:39:00.000Z">
+<meta property="article:modified_time" content="2020-04-22T14:44:19.552Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="索引">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="B+Tree">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/22/ySQL知识点总结（三）索引为什么使用B-Tree而不是，线性数据Hash-AVL-B-Tree/"/>
+
+
+
+
+
+  <title>MySQL知识点总结（三）索引为什么使用B+Tree而不是，线性数据Hash,AVL,B-Tree | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%89%EF%BC%89%E7%B4%A2%E5%BC%95%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8B-Tree%E8%80%8C%E4%B8%8D%E6%98%AF%EF%BC%8C%E7%BA%BF%E6%80%A7%E6%95%B0%E6%8D%AEHash-AVL-B-Tree/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">MySQL知识点总结（三）索引为什么使用B+Tree而不是，线性数据Hash,AVL,B-Tree</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-22T22:39:00+08:00">
+                2020-04-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="2-MySQL索引优化"><a href="#2-MySQL索引优化" class="headerlink" title="2.  MySQL索引优化"></a>2.  MySQL索引优化</h3><h4 id="2-1-MySQL性能下降的原因"><a href="#2-1-MySQL性能下降的原因" class="headerlink" title="2.1 MySQL性能下降的原因"></a>2.1 MySQL性能下降的原因</h4><p>索引失效，join太多，服务器调优及各个参数设置</p>
+<h4 id="2-2创建高性能的索引"><a href="#2-2创建高性能的索引" class="headerlink" title="2.2创建高性能的索引"></a>2.2创建高性能的索引</h4><blockquote>
+<p>什么是索引？ 索引是帮助MySQL高效获取数据的数据结构。索引是数据结构！</p>
+</blockquote>
+<p>索引分类</p>
+<ul>
+<li><p>单值索引  一个索引只包含单个列，如主键 </p>
+</li>
+<li><p>唯一索引 索引列的值必须唯一，允许空值</p>
+</li>
+<li><p>复合索引</p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">#创建索引</span><br><span class="line">CREATE [UNIQUE] INDEX indexName ON mytable(columname(length));</span><br><span class="line">ALTER mytable ADD [UNIQUE]  INDEX [indexName] ON(columnname(length));</span><br><span class="line">#ALTER 添加索引</span><br><span class="line">ALTER TABLE tb_name ADD PRIMARY KEY (column_list);#添加主键</span><br><span class="line">ALTER TABLE tb_name ADD UNIQUE index_name(column_list);#唯一索引，可为NULL</span><br><span class="line">ALTER TABLE tb_name ADD INDEX index_name(column_list);#普通索引，索引值可出现多次</span><br><span class="line">ALTER TABLE tb_name ADD FULL TEXT index_name(column_list);#全文索引</span><br><span class="line">#删除索引</span><br><span class="line">DROP INDEX [indexName] ON mytable;</span><br><span class="line">#查看索引</span><br><span class="line">SHOW INDEX FROM table_name\G;</span><br></pre></td></tr></table></figure>
+
+<h4 id="2-3-索引的类型"><a href="#2-3-索引的类型" class="headerlink" title="2.3 索引的类型"></a>2.3 索引的类型</h4><ul>
+<li>B-Tree /B+Tree   MyISAM  InnoDB</li>
+<li>哈希索引              Memory</li>
+<li>空间数据索引R-Tree      MyISAM</li>
+<li>全文索引</li>
+</ul>
+<p><strong>B+Tree索引的特点，与有序数组，Hash，AVL-Tree，B-Tree的优势</strong></p>
+<ol>
+<li><p>B+树中，非叶节点不保存数据相关信息，只保存关键字和子节点的引用。 所有记录节点存放在叶子节点上，且是顺序存放，由各叶子节点指针进行连接。如果从最左边的叶子节点开始顺序遍历，能得到所有键值的顺序排序。 </p>
+<ul>
+<li><p>B+树的高度一般为2-4层，叶子节点存储的数据通常是一页（默认16k）或一页的整倍数（MySQL每次读取都是读一页）。</p>
+</li>
+<li><p>范围查找时，能通过叶子节点的指针获取数据。例如查找大于等于3的数据，当在叶子节点中查到3时，通过3的尾指针便能获取所有数据，而不需要再像二叉树一样再获取到3的父节点。</p>
+</li>
+</ul>
+</li>
+<li><p>有序数组则是节点存储数据无限大的树，数据量大时太耗内存，而树可以一个节点一个节点加载。</p>
+</li>
+<li><p>Hash索引底层是哈希表，哈希表是一种以key-value存储数据的结构，所以多个数据在存储关系上是完全没有任何顺序关系的，所以：</p>
+<ul>
+<li><p>哈希索引适合等值查询，但是无法进行范围查询 </p>
+</li>
+<li><p>哈希索引没办法利用索引完成排序 </p>
+</li>
+<li><p>哈希索引不支持多列联合索引的最左匹配规则 </p>
+</li>
+<li><p>如果有大量重复键值的情况下，哈希索引的效率会很低，因为存在哈希碰撞问题 </p>
+</li>
+</ul>
+</li>
+<li><p>相对于AVL树，B+Tree一个节点可以存储多个元素，相对于完全平衡二叉树所以整棵树的高度就降低了，磁盘IO效率提高了</p>
+</li>
+<li><p>B树不管叶子节点还是非叶子节点，都会保存数据，并且B树由于叶子节点之间没有链表连接，范围查询时会有局部中序遍历、跨层遍历</p>
+</li>
+</ol>
+<blockquote>
+<p>表中的数据删除后，索引上对应的索引值是不会删除的，特别是在一性次删除大批量数据后，会造成大量的dead leaf挂到索引树上。</p>
+</blockquote>
+<h4 id="2-4-聚簇索引和非聚簇索引-主键索引和辅助索引-覆盖索引"><a href="#2-4-聚簇索引和非聚簇索引-主键索引和辅助索引-覆盖索引" class="headerlink" title="2.4  聚簇索引和非聚簇索引/主键索引和辅助索引/覆盖索引"></a>2.4  聚簇索引和非聚簇索引/主键索引和辅助索引/覆盖索引</h4><ol>
+<li><p>聚簇索引，就是指主索引文件和数据文件为同一份文件，聚簇索引在Innodb存储引擎中存在。 </p>
+</li>
+<li><p>MYISAM中B+Tree索引叶子节点的数据区域存储的是数据记录的地址， MyISAM存储引擎在使用索引查询数据时，会先根据索引查找到数据地址，再根据地址查询到具体的数据。并且主键索引和辅助索引没有太多区别。 </p>
+</li>
+<li><p>在 InnoDB 里，主键索引B+ Tree的叶子节点存储了整行数据， 辅助索引存储的是主键值（都不是地址）。Innodb的一个表一定要有主键索引，如果一个表没有手动建立主键索引，Innodb会查看有没有唯一索引，如果有则选用唯一索引作为主键索引，如果连唯一索引也没有，则会默认建立一个隐藏的主键索引（用户不可见）。另外，Innodb的主键索引要比MyISAM的主键索引查询效率要高（少一次磁盘IO），并且比辅助索引也要高很多。所以，我们在使用Innodb作为存储引擎时，我们最好：</p>
+<ol>
+<li>手动建立主键索引</li>
+<li>尽量利用主键索引查询</li>
+</ol>
+</li>
+<li><p>覆盖索引,即索引包含有所需要的数据</p>
+</li>
+</ol>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E7%B4%A2%E5%BC%95/" rel="tag"># 索引</a>
+          
+            <a href="/tags/MySQL/" rel="tag"># MySQL</a>
+          
+            <a href="/tags/B-Tree/" rel="tag"># B+Tree</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95/" rel="next" title="MySQL知识点总结（一）基础语法">
+                <i class="fa fa-chevron-left"></i> MySQL知识点总结（一）基础语法
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%8C%EF%BC%89MySQL%E6%9E%B6%E6%9E%84%E4%B8%8E%E4%BA%8B%E5%8A%A1%E8%AF%A6%E8%A7%A3/" rel="prev" title="MySQL知识点总结（二）MySQL架构与事务详解">
+                MySQL知识点总结（二）MySQL架构与事务详解 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">47</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-MySQL索引优化"><span class="nav-number">1.</span> <span class="nav-text">2.  MySQL索引优化</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1-MySQL性能下降的原因"><span class="nav-number">1.1.</span> <span class="nav-text">2.1 MySQL性能下降的原因</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-2创建高性能的索引"><span class="nav-number">1.2.</span> <span class="nav-text">2.2创建高性能的索引</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-3-索引的类型"><span class="nav-number">1.3.</span> <span class="nav-text">2.3 索引的类型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-4-聚簇索引和非聚簇索引-主键索引和辅助索引-覆盖索引"><span class="nav-number">1.4.</span> <span class="nav-text">2.4  聚簇索引和非聚簇索引&#x2F;主键索引和辅助索引&#x2F;覆盖索引</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

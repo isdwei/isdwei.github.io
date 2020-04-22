@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="缓存,面试,锁,Redis,分布式锁," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="一些问题的总结Memcache与Redis的区别都有哪些？ 存储方式 Memecache把数据全部存在内存之中，断电后会挂掉，数据不能超过内存大小。 Redis有部份存在硬盘上，redis可以持久化其数据 数据支持类型 memcached所有的值均是简单的字符串，redis作为其替代者，支持更为丰富的数据类型 ，提供list，set，zset，hash等数据结构的存储 使用底层模型不同 它们之间底">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis常见面试题总结">
+<meta property="og:url" content="http://yoursite.com/2020/04/22/ntitled/index.html">
+<meta property="og:site_name" content="藤井树不是树">
+<meta property="og:description" content="一些问题的总结Memcache与Redis的区别都有哪些？ 存储方式 Memecache把数据全部存在内存之中，断电后会挂掉，数据不能超过内存大小。 Redis有部份存在硬盘上，redis可以持久化其数据 数据支持类型 memcached所有的值均是简单的字符串，redis作为其替代者，支持更为丰富的数据类型 ，提供list，set，zset，hash等数据结构的存储 使用底层模型不同 它们之间底">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-04-22T14:37:00.000Z">
+<meta property="article:modified_time" content="2020-04-22T14:46:07.051Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="缓存">
+<meta property="article:tag" content="面试">
+<meta property="article:tag" content="锁">
+<meta property="article:tag" content="Redis">
+<meta property="article:tag" content="分布式锁">
+<meta name="twitter:card" content="summary">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/22/ntitled/"/>
+
+
+
+
+
+  <title>Redis常见面试题总结 | 藤井树不是树</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">藤井树不是树</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/22/ntitled/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="藤井树不是树">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Redis常见面试题总结</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-04-22T22:37:00+08:00">
+                2020-04-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Redis/" itemprop="url" rel="index">
+                    <span itemprop="name">Redis</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="一些问题的总结"><a href="#一些问题的总结" class="headerlink" title="一些问题的总结"></a>一些问题的总结</h2><h3 id="Memcache与Redis的区别都有哪些？"><a href="#Memcache与Redis的区别都有哪些？" class="headerlink" title="Memcache与Redis的区别都有哪些？"></a>Memcache与Redis的区别都有哪些？</h3><ul>
+<li>存储方式 Memecache把数据全部存在内存之中，断电后会挂掉，数据不能超过内存大小。 Redis有部份存在硬盘上，redis可以持久化其数据</li>
+<li>数据支持类型 memcached所有的值均是简单的字符串，redis作为其替代者，支持更为丰富的数据类型 ，提供list，set，zset，hash等数据结构的存储</li>
+<li>使用底层模型不同 它们之间底层实现方式 以及与客户端之间通信的应用协议不一样。 Redis直接自己构建了VM 机制 ，因为一般的系统调用系统函数的话，会浪费一定的时间去移动和请求。</li>
+<li>value 值大小不同：Redis 最大可以达到 512M；memcache 只有 1mb。</li>
+<li>redis的速度比memcached快很多</li>
+<li>Redis支持数据的备份，即master-slave模式的数据备份。</li>
+</ul>
+<h3 id="redis的过期策略以及内存淘汰机制"><a href="#redis的过期策略以及内存淘汰机制" class="headerlink" title="redis的过期策略以及内存淘汰机制"></a>redis的过期策略以及内存淘汰机制</h3><p><strong>redis采用的是定期删除+惰性删除策略。</strong></p>
+<h4 id="为什么不用定时删除策略"><a href="#为什么不用定时删除策略" class="headerlink" title="为什么不用定时删除策略?"></a><strong>为什么不用定时删除策略?</strong></h4><p>定时删除，用一个定时器来负责监视key,过期则自动删除。虽然内存及时释放，但是十分消耗CPU资源。在大并发请求下，CPU要将时间应用在处理请求，而不是删除key，因此没有采用这一策略.</p>
+<h4 id="定期删除-惰性删除是如何工作的呢"><a href="#定期删除-惰性删除是如何工作的呢" class="headerlink" title="定期删除+惰性删除是如何工作的呢?"></a><strong>定期删除+惰性删除是如何工作的呢?</strong></h4><p><strong>定期删除</strong>，redis默认每个100ms检查，是否有过期的key，有过期key则删除。需要说明的是，redis不是每个<strong>100ms将所有的key检查一次</strong>，而是<strong>随机抽取进行检查</strong>(如果每隔100ms,全部key进行检查，redis岂不是卡死)。因此，如果只采用定期删除策略，会导致很多key到时间没有删除。<br>于是，<strong>惰性删除</strong>派上用场。也就是说在你<strong>获取某个key的时候，redis会检查一下，这个key如果设置了过期时间那么是否过期了？如果过期了此时就会删除</strong>。</p>
+<h4 id="采用定期删除-惰性删除就没其他问题了么"><a href="#采用定期删除-惰性删除就没其他问题了么" class="headerlink" title="采用定期删除+惰性删除就没其他问题了么?"></a><strong>采用定期删除+惰性删除就没其他问题了么?</strong></h4><p>不是的，如果定期删除没删除key。然后你也没即时去请求key，也就是说惰性删除也没生效。这样，redis的内存会越来越高。那么就应该<strong>采用内存淘汰机制</strong>。</p>
+<p>在redis.conf中有一行配置：<code>maxmemory-policy volatile-lru</code><br>该配置就是配内存淘汰策略的<br>volatile-lru：从已设置过期时间的数据集（server.db[i].expires）中挑选最近最少使用的数据淘汰<br>volatile-ttl：从已设置过期时间的数据集（server.db[i].expires）中挑选将要过期的数据淘汰<br>volatile-random：从已设置过期时间的数据集（server.db[i].expires）中任意选择数据淘汰<br>allkeys-lru：从数据集（server.db[i].dict）中挑选最近最少使用的数据淘汰<br>allkeys-random：从数据集（server.db[i].dict）中任意选择数据淘汰<br>no-enviction（驱逐）：禁止驱逐数据，新写入操作会报错<br>ps：如果没有设置 expire 的key，不满足先决条件(prerequisites)；那么 volatile-lru, volatile-random 和 volatile-ttl 策略的行为, 和 noeviction(不删除) 基本上一致。</p>
+<h3 id="同时有多个子系统去set一个key。这个时候要注意什么呢？"><a href="#同时有多个子系统去set一个key。这个时候要注意什么呢？" class="headerlink" title="同时有多个子系统去set一个key。这个时候要注意什么呢？"></a>同时有多个子系统去set一个key。这个时候要注意什么呢？</h3><p>不推荐使用redis的事务机制。因为我们的生产环境，基本都是redis集群环境，做了数据分片操作。你一个事务中有涉及到多个key操作的时候，这多个key不一定都存储在同一个redis-server上。因此，redis的事务机制，十分鸡肋。<br>(1) 如果对这个key操作，不要求顺序： 准备一个分布式锁，大家去抢锁，抢到锁就做set操作即可<br>(2) 如果对这个key操作，要求顺序： 分布式锁+时间戳。 假设这会系统B先抢到锁，将key1设置为{valueB 3:05}。接下来系统A抢到锁，发现自己的valueA的时间戳早于缓存中的时间戳，那就不做set操作了。以此类推。<br>(3) 利用队列，将set方法变成串行访问也可以。</p>
+<h3 id="如何保证缓存与数据库双写时的数据一致性"><a href="#如何保证缓存与数据库双写时的数据一致性" class="headerlink" title="如何保证缓存与数据库双写时的数据一致性?"></a>如何保证缓存与数据库双写时的数据一致性?</h3><p>你只要用缓存，就可能会涉及到缓存与数据库双存储双写，你只要是双写，就一定会有数据一致性的问题，那么你如何解决一致性问题？</p>
+<blockquote>
+<p>问题1：先更新数据库，再删除缓存。如果删除缓存失败了，那么会导致数据库中是新数据，缓存中是旧数据，数据就出现了不一致。</p>
+</blockquote>
+<p>解决思路：<strong>先删除缓存，再更新数据库</strong>。如果数据库更新失败了，那么数据库中是旧数据，缓存中是空的，那么数据不会不一致。因为读的时候缓存没有，所以去读了数据库中的旧数据，然后更新到缓存中。</p>
+<blockquote>
+<p>问题2：数据发生了变更，先删除了缓存，然后要去修改数据库，此时还没修改。一个请求过来，去读缓存，发现缓存空了，去查询数据库，<strong>查到了修改前的旧数据</strong>，放到了缓存中。随后数据变更的程序完成了数据库的修改。完了，数据库和缓存中的数据不一样了…</p>
+</blockquote>
+<p>解决思路(1)：写请求<strong>先删除缓存，再去更新数据库，（异步等待段时间)再删除缓存</strong>（成功表示有脏数据出现）。</p>
+<p><em>这种方案读取快速，但会出现短时间的脏数据。</em></p>
+<p>解决思路(2)：写请求<strong>先修改缓存为指定值，再去更新数据库，再更新缓存</strong>。读请求过来后，先读缓存，判断是指定值后进入循环状态，等待写请求更新缓存。如果循环超时就去数据库读取数据，更新缓存。</p>
+<p><em>这种方案保证了读写的一致性，但是读请求会等待写操作的完成，降低了吞吐量</em></p>
+<p><a href="https://www.jianshu.com/p/2936a5c65e6b" target="_blank" rel="noopener">看这篇文章</a></p>
+<h3 id="redis遇到高并发，如果保证读写key的一致性。"><a href="#redis遇到高并发，如果保证读写key的一致性。" class="headerlink" title="redis遇到高并发，如果保证读写key的一致性。"></a>redis遇到高并发，如果保证读写key的一致性。</h3><p>对redis的操作都是具有原子性的，是线程安全的操作，你不用考虑并发问题，redis内部已经帮你处理好并发的问题了。</p>
+<p>redis是一个单线程程序，也就说同一时刻它只能处理一个客户端请求。redis是通过IO多路复用（select，epoll, kqueue，依据不同的平台，采取不同的实现）来处理多个客户端请求的 </p>
+<h3 id="为什么Redis的操作是原子性的，怎么保证原子性的？"><a href="#为什么Redis的操作是原子性的，怎么保证原子性的？" class="headerlink" title="为什么Redis的操作是原子性的，怎么保证原子性的？"></a>为什么Redis的操作是原子性的，怎么保证原子性的？</h3><p>对于Redis而言，命令的原子性指的是：一个操作的不可以再分，操作要么执行，要么不执行。<br>Redis的操作之所以是原子性的，是因为Redis是单线程的。<br>Redis本身提供的所有API都是原子操作，Redis中的事务其实是要保证批量操作的原子性。<br><strong>多个命令在并发中也是原子性的吗？</strong><br><strong>不一定， 将get和set改成单命令操作，incr 。使用Redis的事务，或者使用Redis+Lua==的方式实现.</strong></p>
+<h3 id="Redis-常见性能问题和解决方案？"><a href="#Redis-常见性能问题和解决方案？" class="headerlink" title="Redis 常见性能问题和解决方案？"></a>Redis 常见性能问题和解决方案？</h3><ul>
+<li>Master 最好不要做任何持久化工作，如 RDB 内存快照和 AOF 日志文件</li>
+<li>如果数据比较重要，某个 Slave 开启 AOF 备份数据，策略设置为每秒同步一次</li>
+<li>为了主从复制的速度和连接的稳定性， Master 和 Slave 最好在同一个局域网内</li>
+<li>尽量避免在压力很大的主库上增加从库</li>
+<li>主从复制不要用图状结构，用单向链表结构更为稳定，即： Master &lt;- Slave1 &lt;- Slave2 &lt;-Slave3…</li>
+</ul>
+<h3 id="Redis实现分布式锁"><a href="#Redis实现分布式锁" class="headerlink" title="Redis实现分布式锁"></a>Redis实现分布式锁</h3><p>Redis为单进程单线程模式，采用队列模式将并发访问变成串行访问，且多客户端对Redis的连接并不存在竞争关系，Redis中可以使用SETNX命令实现分布式锁。</p>
+<h4 id="线程锁，进程锁，分布式锁"><a href="#线程锁，进程锁，分布式锁" class="headerlink" title="线程锁，进程锁，分布式锁"></a><strong>线程锁，进程锁，分布式锁</strong></h4><p><strong>线程锁</strong>：主要用来给方法、代码块加锁。当某个方法或代码使用锁，在同一时刻仅有一个线程执行该方法或该代码段。线程锁只在同一进程中有效果，因为线程锁的实现在根本上是依靠线程之间共享内存实现的，比如synchronized是共享对象头，显示锁Lock是共享某个变量（state）。</p>
+<p><strong>进程锁</strong>：为了控制同一操作系统中多个进程访问某个共享资源，因为进程具有独立性，各个进程无法访问其他进程的资源，因此无法通过synchronized等线程锁实现进程锁。</p>
+<p><strong>分布式锁</strong>：当多个进程不在同一个系统中，用分布式锁控制多个进程对资源的访问。 分布式锁一般有三种实现方式：1. 数据库乐观锁；2. 基于Redis的分布式锁；3. 基于ZooKeeper的分布式锁。 </p>
+<h4 id="分布式锁的实现（Redis）"><a href="#分布式锁的实现（Redis）" class="headerlink" title="分布式锁的实现（Redis）"></a>分布式锁的实现（Redis）</h4><p><strong>分布式锁实现的关键是在分布式的应用服务器外，搭建一个存储服务器，存储锁信息，这时候我们很容易就想到了Redis。首先我们要搭建一个Redis服务器，用Redis服务器来存储锁信息。</strong></p>
+<p>在实现的时候要注意的几个关键点：</p>
+<ul>
+<li><strong>锁信息必须是会过期超时的，不能让一个线程长期占有一个锁而导致死锁；</strong></li>
+<li><strong>同一时刻只能有一个线程获取到锁。</strong></li>
+</ul>
+<p>几个要用到的redis命令：</p>
+<p>setnx(key, value)：“set if not exits”，若该key-value不存在，则成功加入缓存并且返回1，否则返回0。</p>
+<p>get(key)：获得key对应的value值，若不存在则返回nil。</p>
+<p>getset(key, value)：先获取key对应的value值，若不存在则返回nil，然后将旧的value更新为新的value。</p>
+<p>expire(key, seconds)：设置key-value的有效期为seconds秒。</p>
+<p>加锁：用setnx将 key 的值设为 value 。 若给定的 key 已经存在，则 SETNX 不做任何动作，返回0.</p>
+<p>解锁：使用 del key 命令就能释放锁</p>
+<p>解决死锁：<br>1）通过Redis中expire()给锁设定最大持有时间，如果超过，则Redis来帮我们释放锁。<br>2） 使用 setnx key “当前系统时间+锁持有的时间”和getset key “当前系统时间+锁持有的时间”组合的命令就可以实现。</p>
+<p><a href="https://blog.csdn.net/yb223731/article/details/90349502" target="_blank" rel="noopener">参考</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/%E7%BC%93%E5%AD%98/" rel="tag"># 缓存</a>
+          
+            <a href="/tags/%E9%9D%A2%E8%AF%95/" rel="tag"># 面试</a>
+          
+            <a href="/tags/%E9%94%81/" rel="tag"># 锁</a>
+          
+            <a href="/tags/Redis/" rel="tag"># Redis</a>
+          
+            <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81/" rel="tag"># 分布式锁</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/22/edis%E7%BC%93%E5%AD%98%E2%80%94%E2%80%94%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9%E3%80%81%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F%E7%AD%89%E9%97%AE%E9%A2%98%E5%8F%8A%E5%85%B6%E8%A7%A3%E5%86%B3%E6%80%9D%E8%B7%AF/" rel="next" title="Redis缓存——缓存雪崩、缓存穿透等问题及其解决思路">
+                <i class="fa fa-chevron-left"></i> Redis缓存——缓存雪崩、缓存穿透等问题及其解决思路
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95/" rel="prev" title="MySQL知识点总结（一）基础语法">
+                MySQL知识点总结（一）基础语法 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">47</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#一些问题的总结"><span class="nav-number">1.</span> <span class="nav-text">一些问题的总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Memcache与Redis的区别都有哪些？"><span class="nav-number">1.1.</span> <span class="nav-text">Memcache与Redis的区别都有哪些？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redis的过期策略以及内存淘汰机制"><span class="nav-number">1.2.</span> <span class="nav-text">redis的过期策略以及内存淘汰机制</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#为什么不用定时删除策略"><span class="nav-number">1.2.1.</span> <span class="nav-text">为什么不用定时删除策略?</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#定期删除-惰性删除是如何工作的呢"><span class="nav-number">1.2.2.</span> <span class="nav-text">定期删除+惰性删除是如何工作的呢?</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#采用定期删除-惰性删除就没其他问题了么"><span class="nav-number">1.2.3.</span> <span class="nav-text">采用定期删除+惰性删除就没其他问题了么?</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同时有多个子系统去set一个key。这个时候要注意什么呢？"><span class="nav-number">1.3.</span> <span class="nav-text">同时有多个子系统去set一个key。这个时候要注意什么呢？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何保证缓存与数据库双写时的数据一致性"><span class="nav-number">1.4.</span> <span class="nav-text">如何保证缓存与数据库双写时的数据一致性?</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redis遇到高并发，如果保证读写key的一致性。"><span class="nav-number">1.5.</span> <span class="nav-text">redis遇到高并发，如果保证读写key的一致性。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#为什么Redis的操作是原子性的，怎么保证原子性的？"><span class="nav-number">1.6.</span> <span class="nav-text">为什么Redis的操作是原子性的，怎么保证原子性的？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Redis-常见性能问题和解决方案？"><span class="nav-number">1.7.</span> <span class="nav-text">Redis 常见性能问题和解决方案？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Redis实现分布式锁"><span class="nav-number">1.8.</span> <span class="nav-text">Redis实现分布式锁</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#线程锁，进程锁，分布式锁"><span class="nav-number">1.8.1.</span> <span class="nav-text">线程锁，进程锁，分布式锁</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#分布式锁的实现（Redis）"><span class="nav-number">1.8.2.</span> <span class="nav-text">分布式锁的实现（Redis）</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
