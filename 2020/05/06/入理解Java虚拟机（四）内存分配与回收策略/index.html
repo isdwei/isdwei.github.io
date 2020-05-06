@@ -79,13 +79,19 @@
 
 
 
-<meta property="og:type" content="website">
-<meta property="og:title" content="藤井树不是树">
-<meta property="og:url" content="http://yoursite.com/tags/JAVA/index.html">
-<meta property="og:site_name" content="藤井树不是树">
+<meta name="description" content="8. 内存分配与回收策略  内存分配：  堆内存分为新生代和老年代（默认1：2） 新生代分为两部分：伊甸区和幸存区（幸存0区，幸存1区）（默认8：1：1）；   回收策略：  新建对象优先在新生代Eden区分配；  大的对象直接放在老年代；  Eden区空间不够时会发生Minor GC：  Minor GC的过程：复制—&gt;清空—&gt;互换   Eden区满时触发第一次Minor GC，活着">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入理解Java虚拟机（四）内存分配与回收策略">
+<meta property="og:url" content="http://yoursite.com/2020/05/06/%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%EF%BC%88%E5%9B%9B%EF%BC%89%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E5%9B%9E%E6%94%B6%E7%AD%96%E7%95%A5/index.html">
+<meta property="og:site_name" content="黄山路443号">
+<meta property="og:description" content="8. 内存分配与回收策略  内存分配：  堆内存分为新生代和老年代（默认1：2） 新生代分为两部分：伊甸区和幸存区（幸存0区，幸存1区）（默认8：1：1）；   回收策略：  新建对象优先在新生代Eden区分配；  大的对象直接放在老年代；  Eden区空间不够时会发生Minor GC：  Minor GC的过程：复制—&gt;清空—&gt;互换   Eden区满时触发第一次Minor GC，活着">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20200306234441645.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70">
+<meta property="article:published_time" content="2020-05-06T15:22:41.000Z">
+<meta property="article:modified_time" content="2020-05-06T15:23:01.396Z">
 <meta property="article:author" content="D. Wei">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img-blog.csdnimg.cn/20200306234441645.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70">
 
 
 
@@ -115,13 +121,13 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/tags/JAVA/"/>
+  <link rel="canonical" href="http://yoursite.com/2020/05/06/入理解Java虚拟机（四）内存分配与回收策略/"/>
 
 
 
 
 
-  <title>Tag: JAVA | 藤井树不是树</title>
+  <title>深入理解Java虚拟机（四）内存分配与回收策略 | 黄山路443号</title>
   
 
 
@@ -140,7 +146,7 @@
     
   
 
-  <div class="container sidebar-position-left ">
+  <div class="container sidebar-position-left page-post-detail">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -151,7 +157,7 @@
     <div class="custom-logo-site-title">
       <a href="/"  class="brand" rel="start">
         <span class="logo-line-before"><i></i></span>
-        <span class="site-title">藤井树不是树</span>
+        <span class="site-title">黄山路443号</span>
         <span class="logo-line-after"><i></i></span>
       </a>
     </div>
@@ -244,54 +250,174 @@
           <div id="content" class="content">
             
 
-  
-  
-  
-  <div class="post-block tag">
+  <div id="posts" class="posts-expand">
+    
 
-    <div id="posts" class="posts-collapse">
-      <div class="collection-title">
-        <h1>JAVA<small>Tag</small>
-        </h1>
-      </div>
+  
 
-      
-        
+  
+  
+  
 
   <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-    <header class="post-header">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/06/%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%EF%BC%88%E5%9B%9B%EF%BC%89%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E4%B8%8E%E5%9B%9E%E6%94%B6%E7%AD%96%E7%95%A5/">
 
-      <h2 class="post-title">
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="黄山路443号">
+    </span>
+
+    
+      <header class="post-header">
+
         
-            <a class="post-title-link" href="/2020/04/21/JAVA%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%B5%85%E6%9E%90/" itemprop="url">
-              
-                <span itemprop="name">JAVA虚拟机浅析</span>
-              
-            </a>
         
-      </h2>
+          <h1 class="post-title" itemprop="name headline">深入理解Java虚拟机（四）内存分配与回收策略</h1>
+        
 
-      <div class="post-meta">
-        <time class="post-time" itemprop="dateCreated"
-              datetime="2020-04-21T16:56:05+08:00"
-              content="2020-04-21" >
-          04-21
-        </time>
-      </div>
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-06T23:22:41+08:00">
+                2020-05-06
+              </time>
+            
 
-    </header>
-  </article>
+            
 
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h5 id="8-内存分配与回收策略"><a href="#8-内存分配与回收策略" class="headerlink" title="8. 内存分配与回收策略"></a>8. 内存分配与回收策略</h5><p><img src="https://img-blog.csdnimg.cn/20200306234441645.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"></p>
+<ul>
+<li><p>内存分配：</p>
+<ul>
+<li>堆内存分为新生代和老年代（默认1：2）</li>
+<li>新生代分为两部分：伊甸区和幸存区（幸存0区，幸存1区）（默认8：1：1）；</li>
+</ul>
+</li>
+<li><p>回收策略：</p>
+<ul>
+<li><p>新建对象优先在新生代Eden区分配；</p>
+</li>
+<li><p>大的对象直接放在老年代；</p>
+</li>
+<li><p>Eden区空间不够时会发生Minor GC：</p>
+<blockquote>
+<p>Minor GC的过程：复制—&gt;清空—&gt;互换</p>
+</blockquote>
+<ul>
+<li>Eden区满时触发第一次Minor GC，活着的对象拷贝到SurvivorFrom区；</li>
+<li>Eden区再次满时，再次触发Minor GC，将Eden区和From区活着的对象拷贝至To区，同时把这些对象的年龄+1；</li>
+<li>清空Eden和From区，将From区与To区互换；</li>
+<li>若一个对象（默认）交换15次后依旧存活，进入老年代。（年龄参数 MaxTenuringThreshold决定）</li>
+</ul>
+</li>
+<li><p>老年代内存满时Full GC</p>
+</li>
+</ul>
+</li>
+</ul>
 
       
     </div>
+    
+    
+    
 
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/06/%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E2%80%94%E2%80%94TCP-IP%E5%8D%8F%E8%AE%AE%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" rel="next" title="深入理解Java虚拟机（三）垃圾收集算法与垃圾收集器">
+                <i class="fa fa-chevron-left"></i> 深入理解Java虚拟机（三）垃圾收集算法与垃圾收集器
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/06/%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%EF%BC%88%E4%BA%94%EF%BC%89G1%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8/" rel="prev" title="深入理解Java虚拟机（五）G1垃圾回收器">
+                深入理解Java虚拟机（五）G1垃圾回收器 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
   </div>
   
   
   
+  </article>
 
-  
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
 
 
           </div>
@@ -299,6 +425,10 @@
 
 
           
+
+  
+
+
 
         </div>
         
@@ -319,8 +449,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
 
-      <section class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <section class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -335,7 +474,7 @@
               
                 <a href="/archives/%7C%7Carchive">
               
-                  <span class="site-state-item-count">36</span>
+                  <span class="site-state-item-count">40</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
@@ -357,7 +496,7 @@
               
               <div class="site-state-item site-state-tags">
                 <a href="/tags/index.html">
-                  <span class="site-state-item-count">47</span>
+                  <span class="site-state-item-count">49</span>
                   <span class="site-state-item-name">tags</span>
                 </a>
               </div>
@@ -396,6 +535,22 @@
         </div>
       </section>
 
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-5"><a class="nav-link" href="#8-内存分配与回收策略"><span class="nav-number">1.</span> <span class="nav-text">8. 内存分配与回收策略</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
       
 
       
@@ -536,6 +691,10 @@
 
 
   
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
 
   
 

@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.4" rel="stylesheet" type="text/css" />
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=5.1.4">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=5.1.4">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=5.1.4" color="#222">
+
+
+
+
+
+  <meta name="keywords" content="JVM,垃圾回收," />
+
+
+
+
+
+
+
+
+
+
+<meta name="description" content="2.垃圾收集器 如何判断对象需要回收？   引用计数算法：  给对象中添加一个引用计数器， 每当有一个地方引用它时， 计数器值就加1； 当引用失效时， 计数器值就减1； 任何时刻计数器为0的对象就是不可能再被使用的。   难以解决循环引用问题！（给个例子） 1234A.instance&#x3D;B;B.instance&#x3D;A;A&#x3D;null;B&#x3D;null;  可达性分析算法（Java，C#）：  当一个对象到">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深入理解Java虚拟机（二）垃圾收集器:什么对象会被回收">
+<meta property="og:url" content="http://yoursite.com/2020/05/06/%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%EF%BC%88%E4%BA%8C%EF%BC%89%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8-%E4%BB%80%E4%B9%88%E5%AF%B9%E8%B1%A1%E4%BC%9A%E8%A2%AB%E5%9B%9E%E6%94%B6/index.html">
+<meta property="og:site_name" content="黄山路443号">
+<meta property="og:description" content="2.垃圾收集器 如何判断对象需要回收？   引用计数算法：  给对象中添加一个引用计数器， 每当有一个地方引用它时， 计数器值就加1； 当引用失效时， 计数器值就减1； 任何时刻计数器为0的对象就是不可能再被使用的。   难以解决循环引用问题！（给个例子） 1234A.instance&#x3D;B;B.instance&#x3D;A;A&#x3D;null;B&#x3D;null;  可达性分析算法（Java，C#）：  当一个对象到">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20200306234044441.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70">
+<meta property="article:published_time" content="2020-05-06T15:19:00.000Z">
+<meta property="article:modified_time" content="2020-05-06T15:20:44.799Z">
+<meta property="article:author" content="D. Wei">
+<meta property="article:tag" content="JVM">
+<meta property="article:tag" content="垃圾回收">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://img-blog.csdnimg.cn/20200306234044441.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '5.1.4',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/06/入理解Java虚拟机（二）垃圾收集器-什么对象会被回收/"/>
+
+
+
+
+
+  <title>深入理解Java虚拟机（二）垃圾收集器:什么对象会被回收 | 黄山路443号</title>
+  
+
+
+
+
+
+
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">黄山路443号</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            About
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tag"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            Categories
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/06/%E5%85%A5%E7%90%86%E8%A7%A3Java%E8%99%9A%E6%8B%9F%E6%9C%BA%EF%BC%88%E4%BA%8C%EF%BC%89%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8-%E4%BB%80%E4%B9%88%E5%AF%B9%E8%B1%A1%E4%BC%9A%E8%A2%AB%E5%9B%9E%E6%94%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="D. Wei">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="黄山路443号">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">深入理解Java虚拟机（二）垃圾收集器:什么对象会被回收</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2020-05-06T23:19:00+08:00">
+                2020-05-06
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">In</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/JVM/" itemprop="url" rel="index">
+                    <span itemprop="name">JVM</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h5 id="2-垃圾收集器"><a href="#2-垃圾收集器" class="headerlink" title="2.垃圾收集器"></a>2.垃圾收集器</h5><blockquote>
+<p>如何判断对象需要回收？</p>
+</blockquote>
+<ul>
+<li><p>引用计数算法：  给对象中添加一个引用计数器， 每当有一个地方引用它时， 计数器值就加1； 当引用失效时， 计数器值就减1； 任何时刻计数器为0的对象就是不可能再被使用的。  </p>
+<p>难以解决循环引用问题！（给个例子）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">A.instance=B;</span><br><span class="line">B.instance=A;</span><br><span class="line">A=<span class="keyword">null</span>;</span><br><span class="line">B=<span class="keyword">null</span>;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>可达性分析算法（Java，C#）：  当一个对象到GC Roots没有任何引用链相连时， 则证明此对象是不可用的。</p>
+<p>可以作为GCRoot的对象：</p>
+<ul>
+<li>虚拟机栈或本地方法栈中引用的对象；</li>
+<li>方法区中类静态属性或常量引用的对象。</li>
+</ul>
+</li>
+</ul>
+<h5 id="3-强引用，软引用，弱引用和虚引用"><a href="#3-强引用，软引用，弱引用和虚引用" class="headerlink" title="3.强引用，软引用，弱引用和虚引用"></a>3.强引用，软引用，弱引用和虚引用</h5><p><img src="https://img-blog.csdnimg.cn/20200306234044441.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2RvbmdfV18=,size_16,color_FFFFFF,t_70" alt="在这里插入图片描述"></p>
+<ul>
+<li><p>强引用：不会被回收，Object obj = new Object()；</p>
+</li>
+<li><p>软引用：有用但并非必须，在即将OOM时会被回收，Java提供SoftReference类实现软引用；</p>
+</li>
+<li><p>弱引用：只能存活到下一次垃圾回收之前，WeakReference类实现；</p>
+<blockquote>
+<p>什么是WeakHashMap</p>
+</blockquote>
+</li>
+<li><p>虚引用：无法通过虚引用取得一个对象实例，唯一作用在于虚引用关联的对象在被垃圾回收时会受到一个系统通知，PhantomReference类实现。</p>
+</li>
+</ul>
+<h5 id="4-确定需要被回收的对象"><a href="#4-确定需要被回收的对象" class="headerlink" title="4.确定需要被回收的对象"></a>4.确定需要被回收的对象</h5><blockquote>
+<p>不可达的对象都会被回收吗</p>
+</blockquote>
+<p>一个对象的死亡至少经历两次标记的过程：</p>
+<ol>
+<li>可达性分析发现没有与GCRoot连接的引用，则会被第一次标记并进行一次筛选，筛选的条件时是否有必要执行finalize()方法。若对象没有覆盖finalize()方法或finalize() 方法已经被虚拟机调用过，则他们都被认为“没有必要执行”；</li>
+<li>对象被判定有必要执行finalize()后，会被放入F-Queue队列。GC会对F-Queue中的对象第二次标记，若对象在finalize()中重新被引用（如通过this被赋值），则会被移除处队列中。</li>
+</ol>
+<ul>
+<li>finalize()只能被调用一次</li>
+<li>finalize()不是析构函数，不建议使用（推荐try…finally…）</li>
+</ul>
+<h5 id="5-回收方法区"><a href="#5-回收方法区" class="headerlink" title="5.回收方法区"></a>5.回收方法区</h5><blockquote>
+<p>方法区会发生垃圾回收吗</p>
+</blockquote>
+<p>Java虚拟机规范中不要求虚拟机回收方法区。</p>
+<p>方法区的回收包括：废弃常量和无用的类</p>
+<ul>
+<li>判断废弃常量也是可达性分析</li>
+<li>判断无用的类：<ul>
+<li>该类所有实例被回收</li>
+<li>加载该类的ClassLoader被回收</li>
+<li>该类对应的java.lang.Class对象没有被引用，无法通过反射访问该类的方法</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>对与大量使用反射、动态代理的框架，频繁自定义ClassLoader的场景都需要虚拟机具备类卸载功能，保证方法区不会溢出。</p>
+</blockquote>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/JVM/" rel="tag"># JVM</a>
+          
+            <a href="/tags/%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/" rel="tag"># 垃圾回收</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/22/ySQL%E7%9F%A5%E8%AF%86%E7%82%B9%E6%80%BB%E7%BB%93%EF%BC%88%E4%BA%94%EF%BC%89%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%EF%BC%8CMySQL%E4%B8%AD%E7%9A%84%E9%94%81-%E4%B8%8E-MVCC/" rel="next" title="MySQL知识点总结（五）主从复制，MySQL中的锁 与 MVCC">
+                <i class="fa fa-chevron-left"></i> MySQL知识点总结（五）主从复制，MySQL中的锁 与 MVCC
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/06/%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C%E2%80%94%E2%80%94TCP-IP%E5%8D%8F%E8%AE%AE%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/" rel="prev" title="深入理解Java虚拟机（三）垃圾收集算法与垃圾收集器">
+                深入理解Java虚拟机（三）垃圾收集算法与垃圾收集器 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">D. Wei</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          <nav class="site-state motion-element">
+
+            
+              <div class="site-state-item site-state-posts">
+              
+                <a href="/archives/%7C%7Carchive">
+              
+                  <span class="site-state-item-count">40</span>
+                  <span class="site-state-item-name">posts</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-categories">
+                <a href="/categories/index.html">
+                  <span class="site-state-item-count">7</span>
+                  <span class="site-state-item-name">categories</span>
+                </a>
+              </div>
+            
+
+            
+              
+              
+              <div class="site-state-item site-state-tags">
+                <a href="/tags/index.html">
+                  <span class="site-state-item-count">49</span>
+                  <span class="site-state-item-name">tags</span>
+                </a>
+              </div>
+            
+
+          </nav>
+
+          
+
+          
+            <div class="links-of-author motion-element">
+                
+                  <span class="links-of-author-item">
+                    <a href="https://github.com/isdwei" target="_blank" title="GitHub">
+                      
+                        <i class="fa fa-fw fa-github"></i>GitHub</a>
+                  </span>
+                
+                  <span class="links-of-author-item">
+                    <a href="mailto:dwei96@mail.ustc.edu.cn" target="_blank" title="E-Mail">
+                      
+                        <i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+                  </span>
+                
+            </div>
+          
+
+          
+          
+
+          
+          
+
+          
+
+        </div>
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-垃圾收集器"><span class="nav-number">1.</span> <span class="nav-text">2.垃圾收集器</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-强引用，软引用，弱引用和虚引用"><span class="nav-number">2.</span> <span class="nav-text">3.强引用，软引用，弱引用和虚引用</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-确定需要被回收的对象"><span class="nav-number">3.</span> <span class="nav-text">4.确定需要被回收的对象</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-回收方法区"><span class="nav-number">4.</span> <span class="nav-text">5.回收方法区</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">D. Wei</span>
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a class="theme-link" target="_blank" href="https://hexo.io">Hexo</a></div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme &mdash; <a class="theme-link" target="_blank" href="https://github.com/iissnan/hexo-theme-next">NexT.Pisces</a> v5.1.4</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+  
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.4"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=5.1.4"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=5.1.4"></script>
+
+
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.4"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.4"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
